@@ -22,6 +22,7 @@ func (c *Calendar) SetName(n string) *Calendar {
 }
 
 func (c *Calendar) GetName() string {
+	return ""
 }
 
 func (c *Calendar) SetDesc(desc string) *Calendar {
@@ -30,22 +31,29 @@ func (c *Calendar) SetDesc(desc string) *Calendar {
 }
 
 func (c *Calendar) GetDesc() string {
+	return ""
 }
 
 func (c *Calendar) SetVersion(ver string) *Calendar {
+	return c
 }
 
 func (c *Calendar) GetVersion() string {
+	return ""
 }
 
 func (c *Calendar) SetTimezone(tz string) *Calendar {
+	return c
 }
 
 func (c *Calendar) GetTimezone() string {
+	return ""
 }
 
 func (c *Calendar) SetEvent(events Event) (*Calendar, error) {
+	return c, nil
 }
 
-func (c *Calendar) GetEvent() (Event, error) {
+func (c *Calendar) GetEvent() (*Event, error) {
+	return new(Event), nil
 }

@@ -15,6 +15,8 @@ import (
 
 var Wg *sync.WaitGroup
 var o sync.Once
+var mutex *sync.Mutex
+var idCounter int
 
 //  unixtimestamp
 const uts = "1136239445"

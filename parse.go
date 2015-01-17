@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"regexp"
 	// "strings"
-	// "errors"
+	"errors"
 	// "fmt"
 	// "io"
 	// "net/http"
@@ -14,30 +14,34 @@ import (
 	// "time"
 )
 
+func init() {
+	Wg = new(sync.WaitGroup)
+	mutex = new(sync.Mutex)
+	idCounter = 0
+}
+
 type Parser struct {
-	inputChan  chan string
-	outputChan chan Event
-	errChan    chan error
+	inputChan       chan string
+	outputChan      chan Event
+	errChan         chan error
+	parsedCalendars []*Calendar
+	statusCalendars int
 }
 
 // creates new parser
-func New() chan string {
+func New() *Parser {
 	p := new(Parser)
 	p.inputChan = make(chan string)
 	p.outputChan = make(chan Event)
 	p.errChan = make(chan error)
-
-	//  init only once the WaitGroup
-	o.Do(func() {
-		Wg = new(sync.WaitGroup)
-		// fmt.Println(Wg)
-	})
+	p.parsedCalendars = []*Calendar{}
 
 	go func(input chan string) {
 		// fmt.Println("Goroute")
 		for {
 			link := <-input
 			Wg.Add(1)
+			p.statusCalendars++
 			go func(link string) {
 				iCalContent, err := p.getICal(link)
 				if err != nil {
@@ -45,6 +49,9 @@ func New() chan string {
 					return
 				}
 				p.parseICalContent(iCalContent)
+				mutex.Lock()
+				p.statusCalendars--
+				mutex.Unlock()
 			}(link)
 		}
 	}(p.inputChan)
@@ -61,6 +68,19 @@ func (p *Parser) GetInputChan() chan string {
 // returns the chan where will be received events
 func (p *Parser) GetOutputChan() chan Event {
 	return p.outputChan
+}
+
+// returns the chan where will be received events
+func (p *Parser) GetCalendars() ([]*Calendar, error) {
+	if !p.Done() {
+		return nil, errors.New("Calendars not parsed")
+	}
+	return p.parsedCalendars, nil
+}
+
+// is everything is parsed
+func (p *Parser) Done() bool {
+	return p.statusCalendars == 0
 }
 
 //  get the data from the calendar
@@ -81,6 +101,8 @@ func (p *Parser) getICal(url string) (string, error) {
 // parses the iCal formated string
 func (p *Parser) parseICalContent(iCalContent string) {
 	ical := NewCalendar()
+	p.parsedCalendars[idCounter] = ical
+	idCounter++
 	ical.SetName(p.parseICalName(iCalContent))
 	ical.SetDesc(p.parseICalDesc(iCalContent))
 	fmt.Println(ical.name)
