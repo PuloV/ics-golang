@@ -15,14 +15,16 @@ import (
 )
 
 type Parser struct {
-	inputChan chan string
-	errChan   chan error
+	inputChan  chan string
+	outputChan chan Event
+	errChan    chan error
 }
 
-// creates new parser and chan for calendar
+// creates new parser
 func New() chan string {
 	p := new(Parser)
 	p.inputChan = make(chan string)
+	p.outputChan = make(chan Event)
 	p.errChan = make(chan error)
 
 	//  init only once the WaitGroup
@@ -47,7 +49,18 @@ func New() chan string {
 		}
 	}(p.inputChan)
 	// p.wg.Wait()
+	// return p.inputChan
+	return p
+}
+
+//  returns the chan for calendar urls
+func (p *Parser) GetInputChan() chan string {
 	return p.inputChan
+}
+
+// returns the chan where will be received events
+func (p *Parser) GetOutputChan() chan Event {
+	return p.outputChan
 }
 
 //  get the data from the calendar
