@@ -21,6 +21,9 @@ type Event struct {
 	alarmCallback func()
 }
 
+func NewEvent() *Event {
+}
+
 func (e *Event) SetStart(start string) *Event {
 }
 
