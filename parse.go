@@ -182,6 +182,8 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 		event.SetSummary(p.parseEventSummary(eventData))
 		event.SetDescription(p.parseEventDescription(eventData))
 		event.SetImportedID(p.parseEventId(eventData))
+		event.SetClass(p.parseEventClass(eventData))
+		event.SetSequence(p.parseEventSequence(eventData))
 		fmt.Printf("%#v \n", event)
 		// break
 	}
@@ -208,9 +210,24 @@ func (p *Parser) parseEventDescription(eventData string) string {
 	return trimField(result, "DESCRIPTION:")
 }
 
-// parses the event description
+// parses the event id provided form google
 func (p *Parser) parseEventId(eventData string) string {
 	re, _ := regexp.Compile(`UID:.*?\n`)
 	result := re.FindString(eventData)
 	return trimField(result, "UID:")
+}
+
+// parses the event class
+func (p *Parser) parseEventClass(eventData string) string {
+	re, _ := regexp.Compile(`CLASS:.*?\n`)
+	result := re.FindString(eventData)
+	return trimField(result, "CLASS:")
+}
+
+// parses the event sequence
+func (p *Parser) parseEventSequence(eventData string) int {
+	re, _ := regexp.Compile(`SEQUENCE:.*?\n`)
+	result := re.FindString(eventData)
+	sq, _ := strconv.Atoi(trimField(result, "SEQUENCE:"))
+	return sq
 }

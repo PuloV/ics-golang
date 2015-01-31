@@ -68,11 +68,12 @@ func (e *Event) GetAttendees() string {
 }
 
 func (e *Event) SetClass(class string) *Event {
+	e.class = class
 	return e
 }
 
 func (e *Event) GetClass() string {
-	return ""
+	return e.class
 }
 
 func (e *Event) SetCreated(created string) *Event {
@@ -91,12 +92,13 @@ func (e *Event) GetLastModified() string {
 	return ""
 }
 
-func (e *Event) SetSequence(sq string) *Event {
+func (e *Event) SetSequence(sq int) *Event {
+	e.sequence = sq
 	return e
 }
 
-func (e *Event) GetSequence() string {
-	return ""
+func (e *Event) GetSequence() int {
+	return e.sequence
 }
 
 func (e *Event) SetStatus(status string) *Event {
