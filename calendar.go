@@ -1,10 +1,14 @@
 package ics
 
+import (
+	"time"
+)
+
 type Calendar struct {
 	name         string
 	description  string
 	version      float64
-	timezone     string
+	timezone     time.Location
 	events       []Event
 	eventsByDate map[string][]Event
 }
@@ -43,12 +47,13 @@ func (c *Calendar) GetVersion() float64 {
 	return c.version
 }
 
-func (c *Calendar) SetTimezone(tz string) *Calendar {
+func (c *Calendar) SetTimezone(tz time.Location) *Calendar {
+	c.timezone = tz
 	return c
 }
 
-func (c *Calendar) GetTimezone() string {
-	return ""
+func (c *Calendar) GetTimezone() time.Location {
+	return c.timezone
 }
 
 func (c *Calendar) SetEvent(events Event) (*Calendar, error) {

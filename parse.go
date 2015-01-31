@@ -12,7 +12,7 @@ import (
 	// "os"
 	"strconv"
 	"sync"
-	// "time"
+	"time"
 )
 
 func init() {
@@ -110,6 +110,7 @@ func (p *Parser) parseICalContent(iCalContent string) {
 	ical.SetName(p.parseICalName(calInfo))
 	ical.SetDesc(p.parseICalDesc(calInfo))
 	ical.SetVersion(p.parseICalVersion(calInfo))
+	ical.SetTimezone(p.parseICalTimezone(calInfo))
 	fmt.Printf("%#v \n", ical)
 	Wg.Done()
 }
@@ -140,7 +141,23 @@ func (p *Parser) parseICalDesc(iCalContent string) string {
 func (p *Parser) parseICalVersion(iCalContent string) float64 {
 	re, _ := regexp.Compile(`VERSION:.*?\n`)
 	result := re.FindString(iCalContent)
-
+	// parse the version result to float
 	ver, _ := strconv.ParseFloat(trimField(result, "VERSION:"), 64)
 	return ver
+}
+
+// parses the iCal timezone
+func (p *Parser) parseICalTimezone(iCalContent string) time.Location {
+	re, _ := regexp.Compile(`X-WR-TIMEZONE:.*?\n`)
+	result := re.FindString(iCalContent)
+
+	// parse the timezone result to time.Location
+	timezone := trimField(result, "X-WR-TIMEZONE:")
+	loc, err := time.LoadLocation(timezone)
+
+	// if fails with the timezone => go UTC
+	if err != nil {
+		loc, err := time.LoadLocation("UTC")
+	}
+	return *loc
 }
