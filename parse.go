@@ -101,10 +101,12 @@ func (p *Parser) getICal(url string) (string, error) {
 // parses the iCal formated string
 func (p *Parser) parseICalContent(iCalContent string) {
 	ical := NewCalendar()
-	p.parsedCalendars[idCounter] = ical
+	p.parsedCalendars = append(p.parsedCalendars, ical)
+	// _, calInfo := explodeICal("(BEGIN:VEVENT\ngot e\nEND:VEVENT)")
+	_, calInfo := explodeICal(iCalContent)
 	idCounter++
-	ical.SetName(p.parseICalName(iCalContent))
-	ical.SetDesc(p.parseICalDesc(iCalContent))
+	ical.SetName(p.parseICalName(calInfo))
+	ical.SetDesc(p.parseICalDesc(calInfo))
 	fmt.Println(ical.name)
 	fmt.Println(ical.description)
 	Wg.Done()
@@ -113,13 +115,23 @@ func (p *Parser) parseICalContent(iCalContent string) {
 // parses the iCal Name
 func (p *Parser) parseICalName(iCalContent string) string {
 	re, _ := regexp.Compile(`X-WR-CALNAME:.*?\n`)
-	result := re.Find(stringToByte(iCalContent))
+	result := re.FindString(iCalContent)
 	return trimField(fmt.Sprintf("%s", result), "X-WR-CALNAME:")
 }
 
 // parses the iCal description
 func (p *Parser) parseICalDesc(iCalContent string) string {
 	re, _ := regexp.Compile(`X-WR-CALDESC:.*?\n`)
-	result := re.Find(stringToByte(iCalContent))
+	result := re.FindString(iCalContent)
 	return trimField(fmt.Sprintf("%s", result), "X-WR-CALDESC:")
+}
+
+// explodes the ICal content to array of events and calendar info
+func explodeICal(iCalContent string) ([]string, string) {
+	// fmt.Println(iCalContent)
+	reEvents, _ := regexp.Compile(`(BEGIN:VEVENT(.*\n)*?END:VEVENT\r\n)`)
+	allEvents := reEvents.FindAllString(iCalContent, len(iCalContent))
+	calInfo := reEvents.ReplaceAllString(iCalContent, "")
+
+	return allEvents, calInfo
 }

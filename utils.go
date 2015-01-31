@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	// "regexp"
 	"sync"
 	"time"
 )
@@ -56,6 +57,7 @@ func downloadFromUrl(url string) (string, error) {
 	// fmt.Println(n, "bytes downloaded.")
 	return fileName, nil
 }
+
 func stringToByte(str string) []byte {
 	return []byte(str)
 }
