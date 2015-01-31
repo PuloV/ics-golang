@@ -181,6 +181,7 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 		event.SetStatus(p.parseEventStatus(eventData))
 		event.SetSummary(p.parseEventSummary(eventData))
 		event.SetDescription(p.parseEventDescription(eventData))
+		event.SetImportedID(p.parseEventId(eventData))
 		fmt.Printf("%#v \n", event)
 		// break
 	}
@@ -205,4 +206,11 @@ func (p *Parser) parseEventDescription(eventData string) string {
 	re, _ := regexp.Compile(`DESCRIPTION:.*?\n`)
 	result := re.FindString(eventData)
 	return trimField(result, "DESCRIPTION:")
+}
+
+// parses the event description
+func (p *Parser) parseEventId(eventData string) string {
+	re, _ := regexp.Compile(`UID:.*?\n`)
+	result := re.FindString(eventData)
+	return trimField(result, "UID:")
 }

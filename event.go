@@ -50,6 +50,15 @@ func (e *Event) GetID() string {
 	return ""
 }
 
+func (e *Event) SetImportedID(id string) *Event {
+	e.importedId = id
+	return e
+}
+
+func (e *Event) GetImportedID() string {
+	return e.importedId
+}
+
 func (e *Event) SetAttendee(email string) *Event {
 	return e
 }
