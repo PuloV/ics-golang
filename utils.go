@@ -63,5 +63,5 @@ func stringToByte(str string) []byte {
 }
 
 func trimField(field, cutset string) string {
-	return strings.TrimRight(strings.Trim(field, cutset), "\n")
+	return strings.TrimRight(strings.Trim(field, cutset), "\r\n")
 }

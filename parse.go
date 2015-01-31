@@ -10,6 +10,7 @@ import (
 	// "io"
 	// "net/http"
 	// "os"
+	"strconv"
 	"sync"
 	// "time"
 )
@@ -102,36 +103,44 @@ func (p *Parser) getICal(url string) (string, error) {
 func (p *Parser) parseICalContent(iCalContent string) {
 	ical := NewCalendar()
 	p.parsedCalendars = append(p.parsedCalendars, ical)
-	// _, calInfo := explodeICal("(BEGIN:VEVENT\ngot e\nEND:VEVENT)")
+
+	// split the data into calendar info and events data
 	_, calInfo := explodeICal(iCalContent)
 	idCounter++
 	ical.SetName(p.parseICalName(calInfo))
 	ical.SetDesc(p.parseICalDesc(calInfo))
-	fmt.Println(ical.name)
-	fmt.Println(ical.description)
+	ical.SetVersion(p.parseICalVersion(calInfo))
+	fmt.Printf("%#v \n", ical)
 	Wg.Done()
+}
+
+// explodes the ICal content to array of events and calendar info
+func explodeICal(iCalContent string) ([]string, string) {
+	reEvents, _ := regexp.Compile(`(BEGIN:VEVENT(.*\n)*?END:VEVENT\r\n)`)
+	allEvents := reEvents.FindAllString(iCalContent, len(iCalContent))
+	calInfo := reEvents.ReplaceAllString(iCalContent, "")
+	return allEvents, calInfo
 }
 
 // parses the iCal Name
 func (p *Parser) parseICalName(iCalContent string) string {
 	re, _ := regexp.Compile(`X-WR-CALNAME:.*?\n`)
 	result := re.FindString(iCalContent)
-	return trimField(fmt.Sprintf("%s", result), "X-WR-CALNAME:")
+	return trimField(result, "X-WR-CALNAME:")
 }
 
 // parses the iCal description
 func (p *Parser) parseICalDesc(iCalContent string) string {
 	re, _ := regexp.Compile(`X-WR-CALDESC:.*?\n`)
 	result := re.FindString(iCalContent)
-	return trimField(fmt.Sprintf("%s", result), "X-WR-CALDESC:")
+	return trimField(result, "X-WR-CALDESC:")
 }
 
-// explodes the ICal content to array of events and calendar info
-func explodeICal(iCalContent string) ([]string, string) {
-	// fmt.Println(iCalContent)
-	reEvents, _ := regexp.Compile(`(BEGIN:VEVENT(.*\n)*?END:VEVENT\r\n)`)
-	allEvents := reEvents.FindAllString(iCalContent, len(iCalContent))
-	calInfo := reEvents.ReplaceAllString(iCalContent, "")
+// parses the iCal version
+func (p *Parser) parseICalVersion(iCalContent string) float64 {
+	re, _ := regexp.Compile(`VERSION:.*?\n`)
+	result := re.FindString(iCalContent)
 
-	return allEvents, calInfo
+	ver, _ := strconv.ParseFloat(trimField(result, "VERSION:"), 64)
+	return ver
 }
