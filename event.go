@@ -12,6 +12,7 @@ type Event struct {
 	alarmTime     time.Time
 	importedId    string
 	status        string
+	description   string
 	summary       string
 	rrule         string
 	class         string
@@ -90,19 +91,30 @@ func (e *Event) GetSequence() string {
 }
 
 func (e *Event) SetStatus(status string) *Event {
+	e.status = status
 	return e
 }
 
 func (e *Event) GetStatus() string {
-	return ""
+	return e.status
 }
 
 func (e *Event) SetSummary(summary string) *Event {
+	e.summary = summary
 	return e
 }
 
 func (e *Event) GetSummary() string {
-	return ""
+	return e.summary
+}
+
+func (e *Event) SetDescription(description string) *Event {
+	e.description = description
+	return e
+}
+
+func (e *Event) GetDescription() string {
+	return e.description
 }
 
 func (e *Event) SetRRule(rrule string) *Event {

@@ -99,19 +99,26 @@ func (p *Parser) getICal(url string) (string, error) {
 	return fmt.Sprintf("%s", fileContent), nil
 }
 
+// ======================== CALENDAR PARSING ===================
+
 // parses the iCal formated string
 func (p *Parser) parseICalContent(iCalContent string) {
 	ical := NewCalendar()
 	p.parsedCalendars = append(p.parsedCalendars, ical)
 
 	// split the data into calendar info and events data
-	_, calInfo := explodeICal(iCalContent)
+	eventsData, calInfo := explodeICal(iCalContent)
 	idCounter++
+
+	// fill the calendar fields
 	ical.SetName(p.parseICalName(calInfo))
 	ical.SetDesc(p.parseICalDesc(calInfo))
 	ical.SetVersion(p.parseICalVersion(calInfo))
 	ical.SetTimezone(p.parseICalTimezone(calInfo))
-	fmt.Printf("%#v \n", ical)
+
+	// parse the events and add them to ical
+	p.parseEvents(ical, eventsData)
+	// fmt.Printf("%#v \n", ical)
 	Wg.Done()
 }
 
@@ -153,11 +160,49 @@ func (p *Parser) parseICalTimezone(iCalContent string) time.Location {
 
 	// parse the timezone result to time.Location
 	timezone := trimField(result, "X-WR-TIMEZONE:")
+	fmt.Println(result)
 	loc, err := time.LoadLocation(timezone)
 
-	// if fails with the timezone => go UTC
+	// if fails with the timezone => go Local
 	if err != nil {
-		loc, err := time.LoadLocation("UTC")
+		fmt.Println(err)
+		loc, _ = time.LoadLocation("UTC")
 	}
 	return *loc
+}
+
+// ======================== EVENTS PARSING ===================
+
+// parses the iCal events Data
+func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
+	for _, eventData := range eventsData {
+		event := NewEvent()
+
+		event.SetStatus(p.parseEventStatus(eventData))
+		event.SetSummary(p.parseEventSummary(eventData))
+		event.SetDescription(p.parseEventDescription(eventData))
+		fmt.Printf("%#v \n", event)
+		// break
+	}
+}
+
+// parses the event summary
+func (p *Parser) parseEventSummary(eventData string) string {
+	re, _ := regexp.Compile(`SUMMARY:.*?\n`)
+	result := re.FindString(eventData)
+	return trimField(result, "SUMMARY:")
+}
+
+// parses the event status
+func (p *Parser) parseEventStatus(eventData string) string {
+	re, _ := regexp.Compile(`STATUS:.*?\n`)
+	result := re.FindString(eventData)
+	return trimField(result, "STATUS:")
+}
+
+// parses the event description
+func (p *Parser) parseEventDescription(eventData string) string {
+	re, _ := regexp.Compile(`DESCRIPTION:.*?\n`)
+	result := re.FindString(eventData)
+	return trimField(result, "DESCRIPTION:")
 }

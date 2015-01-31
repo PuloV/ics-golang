@@ -5,11 +5,10 @@ import (
 	// "io/ioutil"
 	"strings"
 	// "errors"
-	// "fmt"
 	"io"
 	"net/http"
 	"os"
-	// "regexp"
+	"regexp"
 	"sync"
 	"time"
 )
@@ -63,5 +62,7 @@ func stringToByte(str string) []byte {
 }
 
 func trimField(field, cutset string) string {
-	return strings.TrimRight(strings.Trim(field, cutset), "\r\n")
+	re, _ := regexp.Compile(cutset)
+	cutsetRem := re.ReplaceAllString(field, "")
+	return strings.TrimRight(cutsetRem, "\r\n")
 }
