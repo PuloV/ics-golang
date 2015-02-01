@@ -23,6 +23,7 @@ const uts = "1136239445"
 
 //ics time format
 const IcsFormat = "20060102T150405Z"
+const IcsFormatWholeDay = "20060102"
 
 // Waiting to get the job done
 func Wait() {

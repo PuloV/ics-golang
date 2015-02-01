@@ -19,6 +19,7 @@ type Event struct {
 	id            int
 	sequence      int
 	attendees     []string
+	wholeDayEvent bool
 	alarmCallback func()
 }
 
@@ -26,20 +27,22 @@ func NewEvent() *Event {
 	return new(Event)
 }
 
-func (e *Event) SetStart(start string) *Event {
+func (e *Event) SetStart(start time.Time) *Event {
+	e.start = start
 	return e
 }
 
-func (e *Event) GetStart() string {
-	return ""
+func (e *Event) GetStart() time.Time {
+	return e.start
 }
 
-func (e *Event) SetEnd(end string) *Event {
+func (e *Event) SetEnd(end time.Time) *Event {
+	e.end = end
 	return e
 }
 
-func (e *Event) GetEnd() string {
-	return ""
+func (e *Event) GetEnd() time.Time {
+	return e.end
 }
 
 func (e *Event) SetID(id string) *Event {
@@ -148,4 +151,17 @@ func (e *Event) SetAlarm(time string, callback func()) *Event {
 
 func (e *Event) GetAlarm() string {
 	return ""
+}
+
+func (e *Event) SetWholeDayEvent(wholeDay bool) *Event {
+	e.wholeDayEvent = wholeDay
+	return e
+}
+
+func (e *Event) GetWholeDayEvent() bool {
+	return e.wholeDayEvent
+}
+
+func (e *Event) IsWholeDay() bool {
+	return e.wholeDayEvent
 }

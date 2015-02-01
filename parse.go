@@ -178,6 +178,12 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 	for _, eventData := range eventsData {
 		event := NewEvent()
 
+		start := p.parseEventStart(eventData)
+		end := p.parseEventEnd(eventData)
+
+		// whole day event when both times are 00:00:00
+		wholeDay := start.Hour() == 0 && end.Hour() == 0 && start.Minute() == 0 && end.Minute() == 0 && start.Second() == 0 && end.Second() == 0
+
 		event.SetStatus(p.parseEventStatus(eventData))
 		event.SetSummary(p.parseEventSummary(eventData))
 		event.SetDescription(p.parseEventDescription(eventData))
@@ -186,7 +192,12 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 		event.SetSequence(p.parseEventSequence(eventData))
 		event.SetCreated(p.parseEventCreated(eventData))
 		event.SetLastModified(p.parseEventModified(eventData))
-		// fmt.Printf("%#v \n", event)
+		event.SetStart(start)
+		event.SetEnd(end)
+		event.SetWholeDayEvent(wholeDay)
+		if !event.IsWholeDay() {
+			fmt.Printf("%#v \n", event)
+		}
 		// break
 	}
 }
@@ -249,5 +260,46 @@ func (p *Parser) parseEventModified(eventData string) time.Time {
 	result := re.FindString(eventData)
 	modified := trimField(result, "LAST-MODIFIED:")
 	t, _ := time.Parse(IcsFormat, modified)
+	return t
+}
+
+// parses the event modified time
+func (p *Parser) parseEventStart(eventData string) time.Time {
+	reWholeDay, _ := regexp.Compile(`DTSTART;VALUE=DATE:.*?\n`)
+	re, _ := regexp.Compile(`DTSTART:.*?\n`)
+	resultWholeDay := reWholeDay.FindString(eventData)
+	var t time.Time
+
+	if resultWholeDay != "" {
+		// whole day event
+		modified := trimField(resultWholeDay, "DTSTART;VALUE=DATE:")
+		t, _ = time.Parse(IcsFormatWholeDay, modified)
+	} else {
+		// event that has start hour and minute
+		result := re.FindString(eventData)
+		modified := trimField(result, "DTSTART:")
+		t, _ = time.Parse(IcsFormat, modified)
+	}
+
+	return t
+}
+
+// parses the event modified time
+func (p *Parser) parseEventEnd(eventData string) time.Time {
+	reWholeDay, _ := regexp.Compile(`DTEND;VALUE=DATE:.*?\n`)
+	re, _ := regexp.Compile(`DTEND:.*?\n`)
+	resultWholeDay := reWholeDay.FindString(eventData)
+	var t time.Time
+
+	if resultWholeDay != "" {
+		// whole day event
+		modified := trimField(resultWholeDay, "DTEND;VALUE=DATE:")
+		t, _ = time.Parse(IcsFormatWholeDay, modified)
+	} else {
+		// event that has end hour and minute
+		result := re.FindString(eventData)
+		modified := trimField(result, "DTEND:")
+		t, _ = time.Parse(IcsFormat, modified)
+	}
 	return t
 }
