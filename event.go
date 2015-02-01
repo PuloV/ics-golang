@@ -1,6 +1,8 @@
 package ics
 
 import (
+	"crypto/md5"
+	"fmt"
 	"time"
 )
 
@@ -16,7 +18,7 @@ type Event struct {
 	summary       string
 	rrule         string
 	class         string
-	id            int
+	id            string
 	sequence      int
 	attendees     []string
 	wholeDayEvent bool
@@ -46,11 +48,12 @@ func (e *Event) GetEnd() time.Time {
 }
 
 func (e *Event) SetID(id string) *Event {
+	e.id = id
 	return e
 }
 
 func (e *Event) GetID() string {
-	return ""
+	return e.id
 }
 
 func (e *Event) SetImportedID(id string) *Event {
@@ -164,4 +167,16 @@ func (e *Event) GetWholeDayEvent() bool {
 
 func (e *Event) IsWholeDay() bool {
 	return e.wholeDayEvent
+}
+
+//  generates an unique id for the event
+func (e *Event) GenerateEventId() string {
+	if e.GetImportedID() != "" {
+		toBeHashed := fmt.Sprintf("%s%s%s%s", e.GetStart(), e.GetEnd(), e.GetImportedID())
+		return fmt.Sprintf("%x", md5.Sum(stringToByte(toBeHashed)))
+	} else {
+		toBeHashed := fmt.Sprintf("%s%s%s%s", e.GetStart(), e.GetEnd(), e.GetSummary(), e.GetDescription())
+		return fmt.Sprintf("%x", md5.Sum(stringToByte(toBeHashed)))
+	}
+
 }

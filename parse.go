@@ -1,15 +1,10 @@
 package ics
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"regexp"
-	// "strings"
-	"errors"
-	// "fmt"
-	// "io"
-	// "net/http"
-	// "os"
 	"strconv"
 	"sync"
 	"time"
@@ -180,7 +175,6 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 
 		start := p.parseEventStart(eventData)
 		end := p.parseEventEnd(eventData)
-
 		// whole day event when both times are 00:00:00
 		wholeDay := start.Hour() == 0 && end.Hour() == 0 && start.Minute() == 0 && end.Minute() == 0 && start.Second() == 0 && end.Second() == 0
 
@@ -195,9 +189,10 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 		event.SetStart(start)
 		event.SetEnd(end)
 		event.SetWholeDayEvent(wholeDay)
-		if !event.IsWholeDay() {
-			fmt.Printf("%#v \n", event)
-		}
+		event.SetID(event.GenerateEventId())
+		// if !event.IsWholeDay() {
+		// 	fmt.Printf("%#v \n", event)
+		// }
 		// break
 	}
 }
