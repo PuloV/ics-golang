@@ -76,20 +76,22 @@ func (e *Event) GetClass() string {
 	return e.class
 }
 
-func (e *Event) SetCreated(created string) *Event {
+func (e *Event) SetCreated(created time.Time) *Event {
+	e.created = created
 	return e
 }
 
-func (e *Event) GetCreated() string {
-	return ""
+func (e *Event) GetCreated() time.Time {
+	return e.created
 }
 
-func (e *Event) SetLastModified(modified string) *Event {
+func (e *Event) SetLastModified(modified time.Time) *Event {
+	e.modified = modified
 	return e
 }
 
-func (e *Event) GetLastModified() string {
-	return ""
+func (e *Event) GetLastModified() time.Time {
+	return e.modified
 }
 
 func (e *Event) SetSequence(sq int) *Event {

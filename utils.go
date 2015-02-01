@@ -21,6 +21,9 @@ var idCounter int
 //  unixtimestamp
 const uts = "1136239445"
 
+//ics time format
+const IcsFormat = "20060102T150405Z"
+
 // Waiting to get the job done
 func Wait() {
 	Wg.Wait()

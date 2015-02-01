@@ -184,7 +184,9 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 		event.SetImportedID(p.parseEventId(eventData))
 		event.SetClass(p.parseEventClass(eventData))
 		event.SetSequence(p.parseEventSequence(eventData))
-		fmt.Printf("%#v \n", event)
+		event.SetCreated(p.parseEventCreated(eventData))
+		event.SetLastModified(p.parseEventModified(eventData))
+		// fmt.Printf("%#v \n", event)
 		// break
 	}
 }
@@ -230,4 +232,22 @@ func (p *Parser) parseEventSequence(eventData string) int {
 	result := re.FindString(eventData)
 	sq, _ := strconv.Atoi(trimField(result, "SEQUENCE:"))
 	return sq
+}
+
+// parses the event created time
+func (p *Parser) parseEventCreated(eventData string) time.Time {
+	re, _ := regexp.Compile(`CREATED:.*?\n`)
+	result := re.FindString(eventData)
+	created := trimField(result, "CREATED:")
+	t, _ := time.Parse(IcsFormat, created)
+	return t
+}
+
+// parses the event modified time
+func (p *Parser) parseEventModified(eventData string) time.Time {
+	re, _ := regexp.Compile(`LAST-MODIFIED:.*?\n`)
+	result := re.FindString(eventData)
+	modified := trimField(result, "LAST-MODIFIED:")
+	t, _ := time.Parse(IcsFormat, modified)
+	return t
 }
