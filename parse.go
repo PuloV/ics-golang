@@ -191,8 +191,7 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 		event.SetStart(start)
 		event.SetEnd(end)
 		event.SetWholeDayEvent(wholeDay)
-
-		fmt.Printf("%#v \n", p.parseEventAttendees(eventData))
+		event.SetAttendees(p.parseEventAttendees(eventData))
 
 		event.SetID(event.GenerateEventId())
 		// if event.GetRRule() != "" {
@@ -315,23 +314,26 @@ func (p *Parser) parseEventRRule(eventData string) string {
 // ======================== ATTENDEE PARSING ===================
 
 // parses the event attendees
-func (p *Parser) parseEventAttendees(eventData string) string {
+func (p *Parser) parseEventAttendees(eventData string) []Attendee {
+	attendeesObj := []Attendee{}
 	re, _ := regexp.Compile(`ATTENDEE(:|;)(.*?\r\n)(\s.*?\r\n)*`)
-	// fmt.Printf("%#v", eventData)
 	attendees := re.FindAllString(eventData, len(eventData))
-	// fmt.Println(result, len(result))
+
 	for _, attendeeData := range attendees {
 		if attendeeData == "" {
 			continue
 		}
-		p.parseAttendee(strings.Replace(attendeeData, "\r\n ", "", 1))
+		attendee := p.parseAttendee(strings.Replace(attendeeData, "\r\n ", "", 1))
+		//  check for any fields set
+		if attendee.GetEmail() != "" || attendee.GetName() != "" || attendee.GetRole() != "" || attendee.GetStatus() != "" || attendee.GetType() != "" {
+			attendeesObj = append(attendeesObj, attendee)
+		}
 	}
-	return "" //trimField(result, "ATTENDEE:")
+	return attendeesObj
 }
 
 //  parse attendee properties
 func (p *Parser) parseAttendee(attendeeData string) Attendee {
-	// fmt.Printf("%#v \n", attendeeData)
 
 	a := NewAttendee()
 	a.SetEmail(p.parseAttendeeStatus(attendeeData))
@@ -340,7 +342,6 @@ func (p *Parser) parseAttendee(attendeeData string) Attendee {
 	a.SetStatus(p.parseAttendeeStatus(attendeeData))
 	a.SetType(p.parseAttendeeType(attendeeData))
 
-	fmt.Printf("%#v \n", a)
 	return *a
 }
 
@@ -369,7 +370,6 @@ func (p *Parser) parseAttendeeRole(attendeeData string) string {
 	if result == "" {
 		return ""
 	}
-	// fmt.Println("ROLE: ", trimField(result, `(ROLE=|;)`))
 	return trimField(result, `(ROLE=|;)`)
 }
 
