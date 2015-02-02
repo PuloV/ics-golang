@@ -23,6 +23,7 @@ const uts = "1136239445"
 
 //ics time format
 const IcsFormat = "20060102T150405Z"
+const YmdHis = "2006-01-02 15:04:05"
 const IcsFormatWholeDay = "20060102"
 
 // Waiting to get the job done

@@ -194,12 +194,20 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 		event.SetAttendees(p.parseEventAttendees(eventData))
 
 		event.SetID(event.GenerateEventId())
-		fmt.Printf("%#v \n", event.GetAttendees())
+
+		cal.SetEvent(*event)
 		// if event.GetRRule() != "" {
 		// 	fmt.Printf("%#v \n", event.GetRRule())
 		// }
 		// break
 	}
+	t, _ := time.Parse(YmdHis, "2014-09-08 00:00:00")
+	eventsForDay, _ := cal.GetEventsByDate(t)
+	// fmt.Printf("%#v \n", cal.GetEventsByDate(t))
+	for i, events := range eventsForDay {
+		fmt.Printf("For %s we have %#v \n", i, events)
+	}
+
 }
 
 // parses the event summary
