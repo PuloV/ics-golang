@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -186,12 +187,16 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 		event.SetSequence(p.parseEventSequence(eventData))
 		event.SetCreated(p.parseEventCreated(eventData))
 		event.SetLastModified(p.parseEventModified(eventData))
+		event.SetRRule(p.parseEventRRule(eventData))
 		event.SetStart(start)
 		event.SetEnd(end)
 		event.SetWholeDayEvent(wholeDay)
+
+		fmt.Printf("%#v \n", p.parseEventAttendees(eventData))
+
 		event.SetID(event.GenerateEventId())
-		// if !event.IsWholeDay() {
-		// 	fmt.Printf("%#v \n", event)
+		// if event.GetRRule() != "" {
+		// 	fmt.Printf("%#v \n", event.GetRRule())
 		// }
 		// break
 	}
@@ -258,7 +263,7 @@ func (p *Parser) parseEventModified(eventData string) time.Time {
 	return t
 }
 
-// parses the event modified time
+// parses the event start time
 func (p *Parser) parseEventStart(eventData string) time.Time {
 	reWholeDay, _ := regexp.Compile(`DTSTART;VALUE=DATE:.*?\n`)
 	re, _ := regexp.Compile(`DTSTART:.*?\n`)
@@ -279,7 +284,7 @@ func (p *Parser) parseEventStart(eventData string) time.Time {
 	return t
 }
 
-// parses the event modified time
+// parses the event end time
 func (p *Parser) parseEventEnd(eventData string) time.Time {
 	reWholeDay, _ := regexp.Compile(`DTEND;VALUE=DATE:.*?\n`)
 	re, _ := regexp.Compile(`DTEND:.*?\n`)
@@ -297,4 +302,93 @@ func (p *Parser) parseEventEnd(eventData string) time.Time {
 		t, _ = time.Parse(IcsFormat, modified)
 	}
 	return t
+
+}
+
+// parses the event RRULE (the repeater)
+func (p *Parser) parseEventRRule(eventData string) string {
+	re, _ := regexp.Compile(`RRULE:.*?\n`)
+	result := re.FindString(eventData)
+	return trimField(result, "RRULE:")
+}
+
+// ======================== ATTENDEE PARSING ===================
+
+// parses the event attendees
+func (p *Parser) parseEventAttendees(eventData string) string {
+	re, _ := regexp.Compile(`ATTENDEE(:|;)(.*?\r\n)(\s.*?\r\n)*`)
+	// fmt.Printf("%#v", eventData)
+	attendees := re.FindAllString(eventData, len(eventData))
+	// fmt.Println(result, len(result))
+	for _, attendeeData := range attendees {
+		if attendeeData == "" {
+			continue
+		}
+		p.parseAttendee(strings.Replace(attendeeData, "\r\n ", "", 1))
+	}
+	return "" //trimField(result, "ATTENDEE:")
+}
+
+//  parse attendee properties
+func (p *Parser) parseAttendee(attendeeData string) Attendee {
+	// fmt.Printf("%#v \n", attendeeData)
+
+	a := NewAttendee()
+	a.SetEmail(p.parseAttendeeStatus(attendeeData))
+	a.SetName(p.parseAttendeeName(attendeeData))
+	a.SetRole(p.parseAttendeeRole(attendeeData))
+	a.SetStatus(p.parseAttendeeStatus(attendeeData))
+	a.SetType(p.parseAttendeeType(attendeeData))
+
+	fmt.Printf("%#v \n", a)
+	return *a
+}
+
+// parses the attendee email
+func (p *Parser) parseAttendeeMail(attendeeData string) string {
+	re, _ := regexp.Compile(`mailto:.*?\n`)
+	result := re.FindString(attendeeData)
+	return trimField(result, "mailto:")
+}
+
+// parses the attendee status
+func (p *Parser) parseAttendeeStatus(attendeeData string) string {
+	re, _ := regexp.Compile(`PARTSTAT=.*?;`)
+	result := re.FindString(attendeeData)
+	if result == "" {
+		return ""
+	}
+	return trimField(result, `(PARTSTAT=|;)`)
+}
+
+// parses the attendee role
+func (p *Parser) parseAttendeeRole(attendeeData string) string {
+	re, _ := regexp.Compile(`ROLE=.*?;`)
+	result := re.FindString(attendeeData)
+
+	if result == "" {
+		return ""
+	}
+	// fmt.Println("ROLE: ", trimField(result, `(ROLE=|;)`))
+	return trimField(result, `(ROLE=|;)`)
+}
+
+// parses the attendee Name
+func (p *Parser) parseAttendeeName(attendeeData string) string {
+	re, _ := regexp.Compile(`CN=.*?;`)
+	result := re.FindString(attendeeData)
+	if result == "" {
+		return ""
+	}
+	return trimField(result, `(CN=|;)`)
+}
+
+// parses the attendee type
+func (p *Parser) parseAttendeeType(attendeeData string) string {
+	re, _ := regexp.Compile(`CUTYPE=.*?;`)
+	result := re.FindString(attendeeData)
+	if result == "" {
+		return ""
+	}
+	return trimField(result, `(CUTYPE=|;)`)
 }

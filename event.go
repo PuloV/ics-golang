@@ -137,11 +137,12 @@ func (e *Event) GetDescription() string {
 }
 
 func (e *Event) SetRRule(rrule string) *Event {
+	e.rrule = rrule
 	return e
 }
 
 func (e *Event) GetRRule() string {
-	return ""
+	return e.rrule
 }
 
 func (e *Event) Clone(string) *Event {

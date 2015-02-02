@@ -1,11 +1,5 @@
 package ics
 
-import (
-	"crypto/md5"
-	"fmt"
-	"time"
-)
-
 type Attendee struct {
 	name   string
 	email  string
@@ -29,7 +23,7 @@ func (a *Attendee) GetName() string {
 }
 
 func (a *Attendee) SetEmail(e string) *Attendee {
-	a.email = n
+	a.email = e
 	return a
 }
 
