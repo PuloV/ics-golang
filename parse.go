@@ -194,6 +194,7 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 		event.SetAttendees(p.parseEventAttendees(eventData))
 
 		event.SetID(event.GenerateEventId())
+		fmt.Printf("%#v \n", event.GetAttendees())
 		// if event.GetRRule() != "" {
 		// 	fmt.Printf("%#v \n", event.GetRRule())
 		// }

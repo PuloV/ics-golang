@@ -20,13 +20,15 @@ type Event struct {
 	class         string
 	id            string
 	sequence      int
-	attendees     []string
+	attendees     []Attendee
 	wholeDayEvent bool
 	alarmCallback func()
 }
 
 func NewEvent() *Event {
-	return new(Event)
+	e := new(Event)
+	e.attendees = []Attendee{}
+	return e
 }
 
 func (e *Event) SetStart(start time.Time) *Event {
@@ -65,12 +67,17 @@ func (e *Event) GetImportedID() string {
 	return e.importedId
 }
 
-func (e *Event) SetAttendee(email string) *Event {
+func (e *Event) SetAttendee(a Attendee) *Event {
+	e.attendees = append(e.attendees, a)
+	return e
+}
+func (e *Event) SetAttendees(attendees []Attendee) *Event {
+	e.attendees = append(e.attendees, attendees...)
 	return e
 }
 
-func (e *Event) GetAttendees() string {
-	return ""
+func (e *Event) GetAttendees() []Attendee {
+	return e.attendees
 }
 
 func (e *Event) SetClass(class string) *Event {
