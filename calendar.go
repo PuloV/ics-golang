@@ -118,3 +118,9 @@ func (c *Calendar) GetEventsByDate(dateTime time.Time) ([]*Event, error) {
 	}
 	return nil, errors.New(fmt.Sprintf("There are no events for the day %s", day.Format(YmdHis)))
 }
+func (c *Calendar) String() string {
+	eventsCount := len(c.GetEvents())
+	name := c.GetName()
+	desc := c.GetDesc()
+	return fmt.Sprintf("Calendar %s about %s has %d events", name, desc, eventsCount)
+}
