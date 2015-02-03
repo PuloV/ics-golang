@@ -11,7 +11,7 @@ type Event struct {
 	end           time.Time
 	created       time.Time
 	modified      time.Time
-	alarmTime     time.Time
+	alarmTime     time.Duration
 	importedId    string
 	status        string
 	description   string
@@ -23,7 +23,7 @@ type Event struct {
 	attendees     []Attendee
 	wholeDayEvent bool
 	inCalendar    *Calendar
-	alarmCallback func()
+	alarmCallback func(*Event)
 }
 
 func NewEvent() *Event {
@@ -157,7 +157,15 @@ func (e *Event) Clone(string) *Event {
 	return e
 }
 
-func (e *Event) SetAlarm(time string, callback func()) *Event {
+func (e *Event) SetAlarm(alarmAfter time.Duration, callback func(*Event)) *Event {
+	e.alarmCallback = callback
+	e.alarmTime = alarmAfter
+	go func() {
+		select {
+		case <-time.After(alarmAfter):
+			callback(e)
+		}
+	}()
 	return e
 }
 
