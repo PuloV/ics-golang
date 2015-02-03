@@ -18,8 +18,10 @@ func init() {
 type Parser struct {
 	inputChan       chan string
 	outputChan      chan *Event
+	bufferedChan    chan *Event
 	errChan         chan error
 	parsedCalendars []*Calendar
+	parsedEvents    []*Event
 	statusCalendars int
 	wg              *sync.WaitGroup
 }
@@ -29,9 +31,28 @@ func New() *Parser {
 	p := new(Parser)
 	p.inputChan = make(chan string)
 	p.outputChan = make(chan *Event)
+	p.bufferedChan = make(chan *Event)
 	p.errChan = make(chan error)
 	p.wg = new(sync.WaitGroup)
 	p.parsedCalendars = []*Calendar{}
+	p.parsedEvents = []*Event{}
+
+	// buffers the events output chan
+	go func() {
+		for {
+			if len(p.parsedEvents) > 0 {
+				select {
+				case p.outputChan <- p.parsedEvents[0]:
+					p.parsedEvents = p.parsedEvents[1:]
+				case event := <-p.bufferedChan:
+					p.parsedEvents = append(p.parsedEvents, event)
+				}
+			} else {
+				event := <-p.bufferedChan
+				p.parsedEvents = append(p.parsedEvents, event)
+			}
+		}
+	}()
 
 	go func(input chan string) {
 		// endless loop for getting the ics urls
@@ -108,7 +129,7 @@ func (p *Parser) Wait() {
 
 //  get the data from the calendar
 func (p *Parser) getICal(url string) (string, error) {
-	re, _ := regexp.Compile(`http(s)!://`)
+	re, _ := regexp.Compile(`http(s){0,1}:\/\/`)
 
 	var fileName string
 	var errDownload error
@@ -242,16 +263,11 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 		event.SetID(event.GenerateEventId())
 
 		cal.SetEvent(*event)
+		p.bufferedChan <- event
 		// if event.GetRRule() != "" {
 		// 	fmt.Printf("%#v \n", event.GetRRule())
 		// }
 		// break
-	}
-	t, _ := time.Parse(YmdHis, "2014-09-08 00:00:00")
-	eventsForDay, _ := cal.GetEventsByDate(t)
-	// fmt.Printf("%#v \n", cal.GetEventsByDate(t))
-	for i, events := range eventsForDay {
-		fmt.Printf("For %s we have %#v \n", i, events)
 	}
 
 }
