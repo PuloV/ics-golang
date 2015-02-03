@@ -60,10 +60,15 @@ func (c *Calendar) GetTimezone() time.Location {
 	return c.timezone
 }
 
+//  add event to the calendar
 func (c *Calendar) SetEvent(event Event) (*Calendar, error) {
 	//  lock so that the events array doesn't change its size from other goruote
 	mutex.Lock()
 
+	// reference to the calendar
+	if event.GetCalendar() == nil || event.GetCalendar() != c {
+		event.SetCalendar(c)
+	}
 	// add the event to the main array with events
 	c.events = append(c.events, event)
 
@@ -84,6 +89,7 @@ func (c *Calendar) SetEvent(event Event) (*Calendar, error) {
 	return c, nil
 }
 
+//  get event by id
 func (c *Calendar) GetEventByID(eventID string) (*Event, error) {
 	event, ok := c.eventByID[eventID]
 	if ok {
@@ -92,12 +98,17 @@ func (c *Calendar) GetEventByID(eventID string) (*Event, error) {
 	return nil, errors.New(fmt.Sprintf("There is no event with id %s", eventID))
 }
 
+//  get all events in the calendar
 func (c *Calendar) GetEvents() []Event {
 	return c.events
 }
+
+//  get all events in the calendar ordered by date
 func (c *Calendar) GetEventsByDates() map[string][]*Event {
 	return c.eventsByDate
 }
+
+// get all events for specified date
 func (c *Calendar) GetEventsByDate(dateTime time.Time) ([]*Event, error) {
 	tz := c.GetTimezone()
 	day := time.Date(dateTime.Year(), dateTime.Month(), dateTime.Day(), 0, 0, 0, 0, &tz)

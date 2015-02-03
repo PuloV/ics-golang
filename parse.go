@@ -192,7 +192,7 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 		event.SetEnd(end)
 		event.SetWholeDayEvent(wholeDay)
 		event.SetAttendees(p.parseEventAttendees(eventData))
-
+		event.SetCalendar(cal)
 		event.SetID(event.GenerateEventId())
 
 		cal.SetEvent(*event)

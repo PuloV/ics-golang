@@ -22,6 +22,7 @@ type Event struct {
 	sequence      int
 	attendees     []Attendee
 	wholeDayEvent bool
+	inCalendar    *Calendar
 	alarmCallback func()
 }
 
@@ -187,4 +188,13 @@ func (e *Event) GenerateEventId() string {
 		return fmt.Sprintf("%x", md5.Sum(stringToByte(toBeHashed)))
 	}
 
+}
+
+func (e *Event) SetCalendar(cal *Calendar) *Event {
+	e.inCalendar = cal
+	return e
+}
+
+func (e *Event) GetCalendar() *Calendar {
+	return e.inCalendar
 }
