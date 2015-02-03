@@ -198,3 +198,12 @@ func (e *Event) SetCalendar(cal *Calendar) *Event {
 func (e *Event) GetCalendar() *Calendar {
 	return e.inCalendar
 }
+
+func (e *Event) String() string {
+	from := e.GetStart().Format(YmdHis)
+	to := e.GetEnd().Format(YmdHis)
+	summ := e.GetSummary()
+	status := e.GetStatus()
+	attendeeCount := len(e.GetAttendees())
+	return fmt.Sprintf("Event(%s) from %s to %s about %s . %d people are invited to it", status, from, to, summ, attendeeCount)
+}
