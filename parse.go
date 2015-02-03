@@ -12,43 +12,64 @@ import (
 )
 
 func init() {
-	Wg = new(sync.WaitGroup)
 	mutex = new(sync.Mutex)
-	idCounter = 0
 }
 
 type Parser struct {
 	inputChan       chan string
-	outputChan      chan Event
+	outputChan      chan *Event
 	errChan         chan error
 	parsedCalendars []*Calendar
 	statusCalendars int
+	wg              *sync.WaitGroup
 }
 
 // creates new parser
 func New() *Parser {
 	p := new(Parser)
 	p.inputChan = make(chan string)
-	p.outputChan = make(chan Event)
+	p.outputChan = make(chan *Event)
 	p.errChan = make(chan error)
+	p.wg = new(sync.WaitGroup)
 	p.parsedCalendars = []*Calendar{}
 
 	go func(input chan string) {
-		// fmt.Println("Goroute")
+		// endless loop for getting the ics urls
 		for {
 			link := <-input
-			Wg.Add(1)
+
+			// mark calendar in the wait group as not parsed
+			p.wg.Add(1)
+
+			// marks that we have statusCalendars +1 calendars to be parsed
+			mutex.Lock()
 			p.statusCalendars++
+			mutex.Unlock()
+
 			go func(link string) {
+				// mark calendar in the wait group as  parsed
+				defer p.wg.Done()
+
 				iCalContent, err := p.getICal(link)
 				if err != nil {
 					p.errChan <- err
+
+					mutex.Lock()
+					// marks that we have parsed 1 calendar and we have statusCalendars -1 left to be parsed
+					p.statusCalendars--
+					mutex.Unlock()
+
 					return
 				}
+
+				// parse the ICal calendar
 				p.parseICalContent(iCalContent)
+
 				mutex.Lock()
+				// marks that we have parsed 1 calendar and we have statusCalendars -1 left to be parsed
 				p.statusCalendars--
 				mutex.Unlock()
+
 			}(link)
 		}
 	}(p.inputChan)
@@ -63,7 +84,7 @@ func (p *Parser) GetInputChan() chan string {
 }
 
 // returns the chan where will be received events
-func (p *Parser) GetOutputChan() chan Event {
+func (p *Parser) GetOutputChan() chan *Event {
 	return p.outputChan
 }
 
@@ -80,24 +101,50 @@ func (p *Parser) Done() bool {
 	return p.statusCalendars == 0
 }
 
+// wait until everything is parsed
+func (p *Parser) Wait() {
+	p.wg.Wait()
+}
+
 //  get the data from the calendar
 func (p *Parser) getICal(url string) (string, error) {
-	fileName, errDownload := downloadFromUrl(url)
+	re, _ := regexp.Compile(`http(s)!://`)
 
-	if errDownload != nil {
-		return "", errDownload
+	var fileName string
+	var errDownload error
+
+	if re.FindString(url) != "" {
+		// download the file and store it local
+		fileName, errDownload = downloadFromUrl(url)
+
+		if errDownload != nil {
+			return "", errDownload
+		}
+
+	} else { //  use a file from local storage
+
+		//  check if file exists
+		if fileExists(url) {
+			fileName = url
+		} else {
+			err := fmt.Sprintf("File %s does not exists", url)
+			return "", errors.New(err)
+		}
 	}
 
+	//  read the file with the ical data
 	fileContent, errReadFile := ioutil.ReadFile(fileName)
+
 	if errReadFile != nil {
 		return "", errReadFile
 	}
+
 	return fmt.Sprintf("%s", fileContent), nil
 }
 
 // ======================== CALENDAR PARSING ===================
 
-// parses the iCal formated string
+// parses the iCal formated string to a calendar object
 func (p *Parser) parseICalContent(iCalContent string) {
 	ical := NewCalendar()
 	p.parsedCalendars = append(p.parsedCalendars, ical)
@@ -114,8 +161,7 @@ func (p *Parser) parseICalContent(iCalContent string) {
 
 	// parse the events and add them to ical
 	p.parseEvents(ical, eventsData)
-	// fmt.Printf("%#v \n", ical)
-	Wg.Done()
+
 }
 
 // explodes the ICal content to array of events and calendar info

@@ -13,7 +13,6 @@ import (
 	"time"
 )
 
-var Wg *sync.WaitGroup
 var o sync.Once
 var mutex *sync.Mutex
 var idCounter int
@@ -21,15 +20,14 @@ var idCounter int
 //  unixtimestamp
 const uts = "1136239445"
 
-//ics time format
+//ics date time format
 const IcsFormat = "20060102T150405Z"
-const YmdHis = "2006-01-02 15:04:05"
-const IcsFormatWholeDay = "20060102"
 
-// Waiting to get the job done
-func Wait() {
-	Wg.Wait()
-}
+// Y-m-d H:i:S time format
+const YmdHis = "2006-01-02 15:04:05"
+
+// ics date format ( describes a whole day)
+const IcsFormatWholeDay = "20060102"
 
 // downloads the calendar before parsing it
 func downloadFromUrl(url string) (string, error) {
@@ -70,4 +68,9 @@ func trimField(field, cutset string) string {
 	re, _ := regexp.Compile(cutset)
 	cutsetRem := re.ReplaceAllString(field, "")
 	return strings.TrimRight(cutsetRem, "\r\n")
+}
+
+func fileExists(fileName string) bool {
+	_, err := os.Stat(fileName)
+	return err == nil
 }
