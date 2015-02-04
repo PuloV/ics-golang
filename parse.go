@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -13,6 +14,7 @@ import (
 
 func init() {
 	mutex = new(sync.Mutex)
+	DeleteTempFiles = true
 }
 
 type Parser struct {
@@ -158,6 +160,10 @@ func (p *Parser) getICal(url string) (string, error) {
 
 	if errReadFile != nil {
 		return "", errReadFile
+	}
+
+	if DeleteTempFiles && re.FindString(url) != "" {
+		os.Remove(fileName)
 	}
 
 	return fmt.Sprintf("%s", fileContent), nil

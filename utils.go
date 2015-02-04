@@ -16,6 +16,7 @@ import (
 var o sync.Once
 var mutex *sync.Mutex
 var idCounter int
+var DeleteTempFiles bool
 
 //  unixtimestamp
 const uts = "1136239445"
