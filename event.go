@@ -153,8 +153,9 @@ func (e *Event) GetRRule() string {
 	return e.rrule
 }
 
-func (e *Event) Clone(string) *Event {
-	return e
+func (e *Event) Clone() *Event {
+	newE := *e
+	return &newE
 }
 
 func (e *Event) SetAlarm(alarmAfter time.Duration, callback func(*Event)) *Event {

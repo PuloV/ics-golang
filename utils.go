@@ -23,6 +23,9 @@ var DeleteTempFiles bool
 // Describes the file path to the folder with the temp ics files
 var FilePath string
 
+// if RepeatRuleApply is true , the rrule will create new objects for the repeated events
+var RepeatRuleApply bool
+
 //  unixtimestamp
 const uts = "1136239445"
 

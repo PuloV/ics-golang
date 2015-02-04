@@ -16,6 +16,7 @@ func init() {
 	mutex = new(sync.Mutex)
 	DeleteTempFiles = true
 	FilePath = "tmp/"
+	RepeatRuleApply = false
 }
 
 type Parser struct {
@@ -274,6 +275,12 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 
 		cal.SetEvent(*event)
 		p.bufferedChan <- event
+
+		if RepeatRuleApply {
+			repeatedEvent := event.Clone()
+			repeatedEvent.SetImportedID("")
+			fmt.Printf("Repeated : %s , Event : %s \n", repeatedEvent.GetImportedID(), event.GetImportedID())
+		}
 		// if event.GetRRule() != "" {
 		// 	fmt.Printf("%#v \n", event.GetRRule())
 		// }
