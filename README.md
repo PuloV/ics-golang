@@ -1,42 +1,44 @@
 #ics-golang
 Golang ics parser
 ##Installation
-`https://github.com/PuloV/ics-golang`
+`go get https://github.com/PuloV/ics-golang`
 ##How to use it
-* ###Import the package:
+* Import the package:
 ```sh
 import (
 	"github.com/PuloV/ics-golang"
 )
 ```
-* ###Create a new parser:
+* Create a new parser:
 ```sh
-parser := ics.New()
+    parser := ics.New()
 ```
-* ###Pass as many ics urls as you want to the input chan :
+* Pass as many ics urls as you want to the input chan :
 ```sh
-parserChan := parser.GetInputChan()
-parserChan <- "http://www.google.com/calendar/ical/bg.bulgarian%23holiday%40group.v.calendar.google.com/public/basic.ics"
-parserChan <- "http://www.google.com/calendar/ical/en.bulgarian%23holiday%40group.v.calendar.google.com/public/basic.ics"
-parserChan <- "http://www.google.com/calendar/ical/de.bulgarian%23holiday%40group.v.calendar.google.com/public/basic.ics"
+    parserChan := parser.GetInputChan()
+    parserChan <- "http://www.google.com/calendar/ical/bg.bulgarian%23holiday%40group.v.calendar.google.com/public/basic.ics"
+    parserChan <- "http://www.google.com/calendar/ical/en.bulgarian%23holiday%40group.v.calendar.google.com/public/basic.ics"
+    parserChan <- "http://www.google.com/calendar/ical/de.bulgarian%23holiday%40group.v.calendar.google.com/public/basic.ics"
 ```
 ###### * don't rely that the calendars will be parsed in this order
-* ###Wait for the result of the parsing :
+* Wait for the result of the parsing :
 ```sh
-resultsChan := parser.GetOutputChan()
-for {
-    // All data is parsed and send to the chan
-    if parser.Done() {
-    break;
-    }
-    event <- resultChan
-    fmt.Println(event)
-}
+
+    outputChan := parser.GetOutputChan()
+    //  print events
+	go func() {
+		for event := range outputChan {
+			fmt.Println(event.GetImportedID())
+		}
+	}()
+
+	// wait to kill the main goroute
+	parser.Wait()
 ```
 ###### * the data form the calendars may be mixed
 
 ## Different usage
-You can see diferent usage in the test files `<filename>_test.go`
+You can see diferent usage in the [ics-golang-examples](https://github.com/PuloV/ics-golang-examples) or in the test files `<filename>_test.go`
 
 ## LICENCE
 The MIT License (MIT)
