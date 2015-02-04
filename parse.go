@@ -15,13 +15,14 @@ import (
 func init() {
 	mutex = new(sync.Mutex)
 	DeleteTempFiles = true
+	FilePath = "tmp/"
 }
 
 type Parser struct {
 	inputChan       chan string
 	outputChan      chan *Event
 	bufferedChan    chan *Event
-	errChan         chan error
+	errorsOccured   []error
 	parsedCalendars []*Calendar
 	parsedEvents    []*Event
 	statusCalendars int
@@ -34,7 +35,7 @@ func New() *Parser {
 	p.inputChan = make(chan string)
 	p.outputChan = make(chan *Event)
 	p.bufferedChan = make(chan *Event)
-	p.errChan = make(chan error)
+	p.errorsOccured = []error{}
 	p.wg = new(sync.WaitGroup)
 	p.parsedCalendars = []*Calendar{}
 	p.parsedEvents = []*Event{}
@@ -75,7 +76,7 @@ func New() *Parser {
 
 				iCalContent, err := p.getICal(link)
 				if err != nil {
-					p.errChan <- err
+					p.errorsOccured = append(p.errorsOccured, err)
 
 					mutex.Lock()
 					// marks that we have parsed 1 calendar and we have statusCalendars -1 left to be parsed
@@ -126,6 +127,9 @@ func (p *Parser) Done() bool {
 
 // wait until everything is parsed
 func (p *Parser) Wait() {
+	if len(p.errorsOccured) != 0 {
+		fmt.Println(p.errorsOccured)
+	}
 	p.wg.Wait()
 }
 
@@ -234,7 +238,7 @@ func (p *Parser) parseICalTimezone(iCalContent string) time.Location {
 
 	// if fails with the timezone => go Local
 	if err != nil {
-		fmt.Println(err)
+		p.errorsOccured = append(p.errorsOccured, err)
 		loc, _ = time.LoadLocation("UTC")
 	}
 	return *loc
