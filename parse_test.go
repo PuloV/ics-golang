@@ -27,7 +27,76 @@ func TestNewParserChans(t *testing.T) {
 	}
 
 	rType = fmt.Sprintf("%v", reflect.TypeOf(output))
-	if rType != "chan ics.Event" {
+	if rType != "chan *ics.Event" {
 		t.Errorf("Failed to create a output chan! Received : Type %s Value %s", rType, output)
 	}
+}
+
+func TestParsing0Calendars(t *testing.T) {
+	parser := ics.New()
+	parser.Wait()
+
+	parseErrors, err := parser.GetErrors()
+
+	if err != nil {
+		t.Errorf("Failed to wait the parse of the calendars ( %s ) \n", err)
+	}
+	for i, pErr := range parseErrors {
+		t.Errorf("Parsing Error №%d : %s  \n", i, pErr)
+	}
+}
+
+func TestParsing1Calendars(t *testing.T) {
+	parser := ics.New()
+	input := parser.GetInputChan()
+	input <- "testCalendars/2eventsCal.ics"
+	parser.Wait()
+
+	parseErrors, err := parser.GetErrors()
+
+	if err != nil {
+		t.Errorf("Failed to wait the parse of the calendars ( %s ) \n", err)
+	}
+	for i, pErr := range parseErrors {
+		t.Errorf("Parsing Error №%d : %s  \n", i, pErr)
+	}
+
+	calendars, errCal := parser.GetCalendars()
+
+	if errCal != nil {
+		t.Errorf("Failed to get calendars ( %s ) \n", errCal)
+	}
+
+	if len(calendars) != 1 {
+		t.Errorf("Expected 1 calendar , found %d calendars \n", len(calendars))
+	}
+
+}
+
+func TestParsing2Calendars(t *testing.T) {
+	parser := ics.New()
+	input := parser.GetInputChan()
+	input <- "testCalendars/2eventsCal.ics"
+	input <- "testCalendars/3eventsNoAttendee.ics"
+	parser.Wait()
+
+	parseErrors, err := parser.GetErrors()
+
+	if err != nil {
+		t.Errorf("Failed to wait the parse of the calendars ( %s ) \n", err)
+	}
+	for i, pErr := range parseErrors {
+		t.Errorf("Parsing Error №%d : %s  \n", i, pErr)
+	}
+
+	calendars, errCal := parser.GetCalendars()
+
+	if errCal != nil {
+		t.Errorf("Failed to get calendars ( %s ) \n", errCal)
+	}
+
+	if len(calendars) != 2 {
+		t.Errorf("Expected 1 calendar , found %d calendars \n", len(calendars))
+	}
+
 }
