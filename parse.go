@@ -83,7 +83,6 @@ func New() *Parser {
 					// marks that we have parsed 1 calendar and we have statusCalendars -1 left to be parsed
 					p.statusCalendars--
 					mutex.Unlock()
-
 					return
 				}
 

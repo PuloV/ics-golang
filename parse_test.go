@@ -100,3 +100,48 @@ func TestParsing2Calendars(t *testing.T) {
 	}
 
 }
+
+func TestParsingNotExistingCalendar(t *testing.T) {
+	parser := ics.New()
+	input := parser.GetInputChan()
+	input <- "testCalendars/notFound.ics"
+	parser.Wait()
+
+	parseErrors, err := parser.GetErrors()
+
+	if err != nil {
+		t.Errorf("Failed to wait the parse of the calendars ( %s ) \n", err)
+	}
+	if len(parseErrors) != 1 {
+		t.Errorf("Expected 1 error , found %d in :\n  %#v  \n", len(parseErrors), parseErrors)
+	}
+
+}
+
+func TestParsingNotExistingAndExistingCalendars(t *testing.T) {
+	parser := ics.New()
+	input := parser.GetInputChan()
+	input <- "testCalendars/3eventsNoAttendee.ics"
+	input <- "testCalendars/notFound.ics"
+	parser.Wait()
+
+	parseErrors, err := parser.GetErrors()
+
+	if err != nil {
+		t.Errorf("Failed to wait the parse of the calendars ( %s ) \n", err)
+	}
+	if len(parseErrors) != 1 {
+		t.Errorf("Expected 1 error , found %d in :\n  %#v  \n", len(parseErrors), parseErrors)
+	}
+
+	calendars, errCal := parser.GetCalendars()
+
+	if errCal != nil {
+		t.Errorf("Failed to get calendars ( %s ) \n", errCal)
+	}
+
+	if len(calendars) != 1 {
+		t.Errorf("Expected 1 calendar , found %d calendars \n", len(calendars))
+	}
+
+}
