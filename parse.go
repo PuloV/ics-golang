@@ -266,6 +266,7 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 		event.SetCreated(p.parseEventCreated(eventData))
 		event.SetLastModified(p.parseEventModified(eventData))
 		event.SetRRule(p.parseEventRRule(eventData))
+		event.SetLocation(p.parseEventLocation(eventData))
 		event.SetStart(start)
 		event.SetEnd(end)
 		event.SetWholeDayEvent(wholeDay)
@@ -279,7 +280,18 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 		if RepeatRuleApply {
 			repeatedEvent := event.Clone()
 			repeatedEvent.SetImportedID("")
-			fmt.Printf("Repeated : %s , Event : %s \n", repeatedEvent.GetImportedID(), event.GetImportedID())
+			// fmt.Printf("Repeated : %s , Event : %s \n", repeatedEvent.GetImportedID(), event.GetImportedID())
+
+			reFr, _ := regexp.Compile(`FREQ=.*?;`)
+			freq := trimField(reFr.FindString(event.GetRRule()), `(FREQ=|;)`)
+
+			reBM, _ := regexp.Compile(`BYMONTH=.*?;`)
+			bymonth := trimField(reBM.FindString(event.GetRRule()), `(BYMONTH=|;)`)
+
+			reBD, _ := regexp.Compile(`BYDAY=.*?;`)
+			byday := trimField(reBD.FindString(event.GetRRule()), `(BYDAY=|;)`)
+
+			fmt.Println(freq, bymonth, byday)
 		}
 		// if event.GetRRule() != "" {
 		// 	fmt.Printf("%#v \n", event.GetRRule())
@@ -397,6 +409,13 @@ func (p *Parser) parseEventRRule(eventData string) string {
 	re, _ := regexp.Compile(`RRULE:.*?\n`)
 	result := re.FindString(eventData)
 	return trimField(result, "RRULE:")
+}
+
+// parses the event RRULE (the repeater)
+func (p *Parser) parseEventLocation(eventData string) string {
+	re, _ := regexp.Compile(`LOCATION:.*?\n`)
+	result := re.FindString(eventData)
+	return trimField(result, "LOCATION:")
 }
 
 // ======================== ATTENDEE PARSING ===================

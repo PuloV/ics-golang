@@ -15,6 +15,7 @@ type Event struct {
 	importedId    string
 	status        string
 	description   string
+	location      string
 	summary       string
 	rrule         string
 	class         string
@@ -206,6 +207,15 @@ func (e *Event) SetCalendar(cal *Calendar) *Event {
 
 func (e *Event) GetCalendar() *Calendar {
 	return e.inCalendar
+}
+
+func (e *Event) SetLocation(location string) *Event {
+	e.location = location
+	return e
+}
+
+func (e *Event) GetLocation() string {
+	return e.location
 }
 
 func (e *Event) String() string {
