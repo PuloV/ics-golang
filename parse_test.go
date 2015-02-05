@@ -171,3 +171,44 @@ func TestParsingWrongCalendarUrls(t *testing.T) {
 	}
 
 }
+func TestCalendarInfo(t *testing.T) {
+	parser := ics.New()
+	input := parser.GetInputChan()
+	input <- "testCalendars/2eventsCal.ics"
+	parser.Wait()
+
+	parseErrors, err := parser.GetErrors()
+
+	if err != nil {
+		t.Errorf("Failed to wait the parse of the calendars ( %s ) \n", err)
+	}
+	if len(parseErrors) != 0 {
+		t.Errorf("Expected 0 error , found %d in :\n  %#v  \n", len(parseErrors), parseErrors)
+	}
+
+	calendars, errCal := parser.GetCalendars()
+
+	if errCal != nil {
+		t.Errorf("Failed to get calendars ( %s ) \n", errCal)
+	}
+
+	if len(calendars) != 1 {
+		t.Errorf("Expected 1 calendar , found %d calendars \n", len(calendars))
+		return
+	}
+
+	calendar := calendars[0]
+
+	if calendar.GetName() != "2 Events Cal" {
+		t.Errorf("Expected name '%s' calendar , got '%s' calendars \n", "2 Events Cal", calendar.GetName())
+	}
+
+	if calendar.GetDesc() != "The cal has 2 events(1st with attendees and second without)" {
+		t.Errorf("Expected description '%s' calendar , got '%s' calendars \n", "The cal has 2 events(1st with attendees and second without)", calendar.GetDesc())
+	}
+
+	if calendar.GetVersion() != 2.0 {
+		t.Errorf("Expected version %s calendar , got %s calendars \n", 2.0, calendar.GetVersion())
+	}
+
+}
