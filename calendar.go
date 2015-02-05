@@ -30,7 +30,7 @@ func (c *Calendar) SetName(n string) *Calendar {
 }
 
 func (c *Calendar) GetName() string {
-	return ""
+	return c.name
 }
 
 func (c *Calendar) SetDesc(desc string) *Calendar {
@@ -39,7 +39,7 @@ func (c *Calendar) SetDesc(desc string) *Calendar {
 }
 
 func (c *Calendar) GetDesc() string {
-	return ""
+	return c.description
 }
 
 func (c *Calendar) SetVersion(ver float64) *Calendar {
