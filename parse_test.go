@@ -5,6 +5,7 @@ import (
 	"github.com/PuloV/ics-golang"
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestNewParser(t *testing.T) {
@@ -209,6 +210,41 @@ func TestCalendarInfo(t *testing.T) {
 
 	if calendar.GetVersion() != 2.0 {
 		t.Errorf("Expected version %s calendar , got %s calendars \n", 2.0, calendar.GetVersion())
+	}
+
+	events := calendar.GetEvents()
+	if len(events) != 2 {
+		t.Errorf("Expected  %s events in calendar , got %s events \n", 2, len(events))
+	}
+
+	eventsByDates := calendar.GetEventsByDates()
+	if len(eventsByDates) != 2 {
+		t.Errorf("Expected  %s events in calendar , got %s events \n", 2, len(eventsByDates))
+	}
+
+	geometryExamIcsFormat, errICS := time.Parse(ics.IcsFormat, "20140616T060000Z")
+	if err != nil {
+		t.Errorf("(ics time format) Unexpected error %s \n", errICS)
+	}
+
+	geometryExamYmdHis, errYMD := time.Parse(ics.YmdHis, "2014-06-16 06:00:00")
+	if err != nil {
+		t.Errorf("(YmdHis time format) Unexpected error %s \n", errYMD)
+	}
+	eventsByDate, err := calendar.GetEventsByDate(geometryExamIcsFormat)
+	if err != nil {
+		t.Errorf("(ics time format) Unexpected error %s \n", err)
+	}
+	if len(eventsByDate) != 1 {
+		t.Errorf("(ics time format) Expected  %s events in calendar for the date 2014-06-16 , got %s events \n", 1, len(eventsByDate))
+	}
+
+	eventsByDate, err = calendar.GetEventsByDate(geometryExamYmdHis)
+	if err != nil {
+		t.Errorf("(YmdHis time format) Unexpected error %s \n", err)
+	}
+	if len(eventsByDate) != 1 {
+		t.Errorf("(YmdHis time format) Expected  %s events in calendar for the date 2014-06-16 , got %s events \n", 1, len(eventsByDate))
 	}
 
 }
