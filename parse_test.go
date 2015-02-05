@@ -145,3 +145,29 @@ func TestParsingNotExistingAndExistingCalendars(t *testing.T) {
 	}
 
 }
+func TestParsingWrongCalendarUrls(t *testing.T) {
+	parser := ics.New()
+	input := parser.GetInputChan()
+	input <- "http://localhost/goTestFails"
+	parser.Wait()
+
+	parseErrors, err := parser.GetErrors()
+
+	if err != nil {
+		t.Errorf("Failed to wait the parse of the calendars ( %s ) \n", err)
+	}
+	if len(parseErrors) != 1 {
+		t.Errorf("Expected 1 error , found %d in :\n  %#v  \n", len(parseErrors), parseErrors)
+	}
+
+	calendars, errCal := parser.GetCalendars()
+
+	if errCal != nil {
+		t.Errorf("Failed to get calendars ( %s ) \n", errCal)
+	}
+
+	if len(calendars) != 0 {
+		t.Errorf("Expected 0 calendar , found %d calendars \n", len(calendars))
+	}
+
+}
