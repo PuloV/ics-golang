@@ -136,9 +136,6 @@ func (p *Parser) Done() bool {
 
 // wait until everything is parsed
 func (p *Parser) Wait() {
-	if len(p.errorsOccured) != 0 {
-		fmt.Println(p.errorsOccured)
-	}
 	p.wg.Wait()
 }
 
@@ -242,7 +239,7 @@ func (p *Parser) parseICalTimezone(iCalContent string) time.Location {
 
 	// parse the timezone result to time.Location
 	timezone := trimField(result, "X-WR-TIMEZONE:")
-	fmt.Println(result)
+	// create location instance
 	loc, err := time.LoadLocation(timezone)
 
 	// if fails with the timezone => go Local
