@@ -121,6 +121,14 @@ func (p *Parser) GetCalendars() ([]*Calendar, error) {
 	return p.parsedCalendars, nil
 }
 
+// returns the array with the errors occurred while parsing the events
+func (p *Parser) GetErrors() ([]error, error) {
+	if !p.Done() {
+		return nil, errors.New("Calendars not parsed")
+	}
+	return p.errorsOccured, nil
+}
+
 // is everything is parsed
 func (p *Parser) Done() bool {
 	return p.statusCalendars == 0
