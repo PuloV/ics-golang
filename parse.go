@@ -435,8 +435,8 @@ func (p *Parser) parseEventLocation(eventData string) string {
 // ======================== ATTENDEE PARSING ===================
 
 // parses the event attendees
-func (p *Parser) parseEventAttendees(eventData string) []Attendee {
-	attendeesObj := []Attendee{}
+func (p *Parser) parseEventAttendees(eventData string) []*Attendee {
+	attendeesObj := []*Attendee{}
 	re, _ := regexp.Compile(`ATTENDEE(:|;)(.*?\r\n)(\s.*?\r\n)*`)
 	attendees := re.FindAllString(eventData, len(eventData))
 
@@ -454,21 +454,24 @@ func (p *Parser) parseEventAttendees(eventData string) []Attendee {
 }
 
 // parses the event organizer
-func (p *Parser) parseEventOrganizer(eventData string) Attendee {
+func (p *Parser) parseEventOrganizer(eventData string) *Attendee {
 
 	re, _ := regexp.Compile(`ORGANIZER(:|;)(.*?\r\n)(\s.*?\r\n)*`)
 	organizerData := re.FindString(eventData)
+	if organizerData == "" {
+		return nil
+	}
 	organizerDataFormated := strings.Replace(organizerData, "\r\n ", "", 1)
 
 	a := NewAttendee()
 	a.SetEmail(p.parseAttendeeMail(organizerDataFormated))
 	a.SetName(p.parseOrganizerName(organizerDataFormated))
 
-	return *a
+	return a
 }
 
 //  parse attendee properties
-func (p *Parser) parseAttendee(attendeeData string) Attendee {
+func (p *Parser) parseAttendee(attendeeData string) *Attendee {
 
 	a := NewAttendee()
 	a.SetEmail(p.parseAttendeeStatus(attendeeData))
@@ -476,7 +479,7 @@ func (p *Parser) parseAttendee(attendeeData string) Attendee {
 	a.SetRole(p.parseAttendeeRole(attendeeData))
 	a.SetStatus(p.parseAttendeeStatus(attendeeData))
 	a.SetType(p.parseAttendeeType(attendeeData))
-	return *a
+	return a
 }
 
 // parses the attendee email

@@ -21,8 +21,8 @@ type Event struct {
 	class         string
 	id            string
 	sequence      int
-	attendees     []Attendee
-	organizer     Attendee
+	attendees     []*Attendee
+	organizer     *Attendee
 	wholeDayEvent bool
 	inCalendar    *Calendar
 	alarmCallback func(*Event)
@@ -30,7 +30,7 @@ type Event struct {
 
 func NewEvent() *Event {
 	e := new(Event)
-	e.attendees = []Attendee{}
+	e.attendees = []*Attendee{}
 	return e
 }
 
@@ -70,23 +70,23 @@ func (e *Event) GetImportedID() string {
 	return e.importedId
 }
 
-func (e *Event) SetOrganizer(a Attendee) *Event {
+func (e *Event) SetOrganizer(a *Attendee) *Event {
 	e.organizer = a
 	return e
 }
-func (e *Event) GetOrganizer() Attendee {
+func (e *Event) GetOrganizer() *Attendee {
 	return e.organizer
 }
-func (e *Event) SetAttendee(a Attendee) *Event {
+func (e *Event) SetAttendee(a *Attendee) *Event {
 	e.attendees = append(e.attendees, a)
 	return e
 }
-func (e *Event) SetAttendees(attendees []Attendee) *Event {
+func (e *Event) SetAttendees(attendees []*Attendee) *Event {
 	e.attendees = append(e.attendees, attendees...)
 	return e
 }
 
-func (e *Event) GetAttendees() []Attendee {
+func (e *Event) GetAttendees() []*Attendee {
 	return e.attendees
 }
 

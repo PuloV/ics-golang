@@ -1,5 +1,9 @@
 package ics
 
+import (
+	"fmt"
+)
+
 type Attendee struct {
 	name   string
 	email  string
@@ -56,4 +60,9 @@ func (a *Attendee) SetType(ct string) *Attendee {
 
 func (a *Attendee) GetType() string {
 	return a.cutype
+}
+
+func (a *Attendee) String() string {
+
+	return fmt.Sprintf("%s with email %s", a.name, a.email)
 }
