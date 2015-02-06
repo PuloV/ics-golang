@@ -3,6 +3,7 @@ package ics_test
 import (
 	"fmt"
 	"github.com/PuloV/ics-golang"
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -172,6 +173,24 @@ func TestParsingWrongCalendarUrls(t *testing.T) {
 	}
 
 }
+
+func TestCreatingTempDir(t *testing.T) {
+
+	ics.FilePath = "testingTempDir/"
+	parser := ics.New()
+	input := parser.GetInputChan()
+	input <- "https://www.google.com/calendar/ical/yordanpulov%40gmail.com/private-81525ac0eb14cdc2e858c15e1b296a1c/basic.ics"
+	parser.Wait()
+	_, err := os.Stat(ics.FilePath)
+	if err != nil {
+		t.Errorf("Failed to create %s  \n", ics.FilePath)
+	}
+	// remove the new dir
+	os.Remove(ics.FilePath)
+	// return the var to default
+	ics.FilePath = "tmp/"
+}
+
 func TestCalendarInfo(t *testing.T) {
 	parser := ics.New()
 	input := parser.GetInputChan()
@@ -247,4 +266,47 @@ func TestCalendarInfo(t *testing.T) {
 		t.Errorf("(YmdHis time format) Expected  %s events in calendar for the date 2014-06-16 , got %s events \n", 1, len(eventsByDate))
 	}
 
+}
+
+func TestCalendarEvents(t *testing.T) {
+	parser := ics.New()
+	input := parser.GetInputChan()
+	input <- "testCalendars/2eventsCal.ics"
+	parser.Wait()
+
+	parseErrors, err := parser.GetErrors()
+
+	if err != nil {
+		t.Errorf("Failed to wait the parse of the calendars ( %s ) \n", err)
+	}
+	if len(parseErrors) != 0 {
+		t.Errorf("Expected 0 error , found %d in :\n  %#v  \n", len(parseErrors), parseErrors)
+	}
+
+	calendars, errCal := parser.GetCalendars()
+
+	if errCal != nil {
+		t.Errorf("Failed to get calendars ( %s ) \n", errCal)
+	}
+
+	if len(calendars) != 1 {
+		t.Errorf("Expected 1 calendar , found %d calendars \n", len(calendars))
+		return
+	}
+
+	calendar := calendars[0]
+	event, err := calendar.GetEventByImportedID("btb9tnpcnd4ng9rn31rdo0irn8@google.com")
+	if err != nil {
+		t.Errorf("Failed to get event by id with error %s \n", err)
+	}
+
+	start, _ := time.Parse(ics.IcsFormat, "20140714T100000Z")
+	end, _ := time.Parse(ics.IcsFormat, "20140714T110000Z")
+
+	if event.GetStart() != start {
+		t.Errorf("Expected start %s , found %s  \n", start, event.GetStart())
+	}
+	if event.GetEnd() != end {
+		t.Errorf("Expected start %s , found %s  \n", end, event.GetEnd())
+	}
 }
