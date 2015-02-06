@@ -441,4 +441,17 @@ func TestCalendarEventAttendees(t *testing.T) {
 
 	}
 
+	if john.GetEmail() != "j.smith@gmail.com" {
+		t.Errorf("Expected attendee email %s , found %s  \n", "j.smith@gmail.com", john.GetEmail())
+
+	}
+	if sue.GetEmail() != "SueMZimmermann@dayrep.com" {
+		t.Errorf("Expected attendee email %s , found %s  \n", "SueMZimmermann@dayrep.com", sue.GetEmail())
+
+	}
+	if travis.GetEmail() != "travis@dayrep.com" {
+		t.Errorf("Expected attendee email %s , found %s  \n", "travis@dayrep.com", travis.GetEmail())
+
+	}
+
 }
