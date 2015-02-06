@@ -474,7 +474,7 @@ func (p *Parser) parseEventOrganizer(eventData string) *Attendee {
 func (p *Parser) parseAttendee(attendeeData string) *Attendee {
 
 	a := NewAttendee()
-	a.SetEmail(p.parseAttendeeStatus(attendeeData))
+	a.SetEmail(p.parseAttendeeMail(attendeeData))
 	a.SetName(p.parseAttendeeName(attendeeData))
 	a.SetRole(p.parseAttendeeRole(attendeeData))
 	a.SetStatus(p.parseAttendeeStatus(attendeeData))
