@@ -371,6 +371,7 @@ func TestCalendarEvents(t *testing.T) {
 	eventNoAttendees, errNoAttendees := calendar.GetEventByImportedID("mhhesb7si5968njvthgbiub7nk@google.com")
 	attendeesCount = 0
 	org = new(ics.Attendee)
+
 	if errNoAttendees != nil {
 		t.Errorf("Failed to get event by id with error %s \n", errNoAttendees)
 	}
@@ -382,4 +383,62 @@ func TestCalendarEvents(t *testing.T) {
 	if eventNoAttendees.GetOrganizer() != nil {
 		t.Errorf("Expected organizer %s , found %s  \n", org, eventNoAttendees.GetOrganizer())
 	}
+}
+
+func TestCalendarEventAttendees(t *testing.T) {
+	parser := ics.New()
+	input := parser.GetInputChan()
+	input <- "testCalendars/2eventsCal.ics"
+	parser.Wait()
+
+	parseErrors, err := parser.GetErrors()
+
+	if err != nil {
+		t.Errorf("Failed to wait the parse of the calendars ( %s ) \n", err)
+	}
+	if len(parseErrors) != 0 {
+		t.Errorf("Expected 0 error , found %d in :\n  %#v  \n", len(parseErrors), parseErrors)
+	}
+
+	calendars, errCal := parser.GetCalendars()
+
+	if errCal != nil {
+		t.Errorf("Failed to get calendars ( %s ) \n", errCal)
+	}
+
+	if len(calendars) != 1 {
+		t.Errorf("Expected 1 calendar , found %d calendars \n", len(calendars))
+		return
+	}
+
+	calendar := calendars[0]
+	event, err := calendar.GetEventByImportedID("btb9tnpcnd4ng9rn31rdo0irn8@google.com")
+	if err != nil {
+		t.Errorf("Failed to get event by id with error %s \n", err)
+	}
+	attendees := event.GetAttendees()
+	attendeesCount := 3
+
+	if len(attendees) != attendeesCount {
+		t.Errorf("Expected attendeesCount %s , found %s  \n", attendeesCount, len(attendees))
+		return
+	}
+
+	john := attendees[0]
+	sue := attendees[1]
+	travis := attendees[2]
+
+	if john.GetName() != "John Smith" {
+		t.Errorf("Expected attendee name %s , found %s  \n", "John Smith", john.GetName())
+
+	}
+	if sue.GetName() != "Sue Zimmermann" {
+		t.Errorf("Expected attendee name %s , found %s  \n", "Sue Zimmermann", sue.GetName())
+
+	}
+	if travis.GetName() != "Travis M. Vollmer" {
+		t.Errorf("Expected attendee name %s , found %s  \n", "Travis M. Vollmer", travis.GetName())
+
+	}
+
 }
