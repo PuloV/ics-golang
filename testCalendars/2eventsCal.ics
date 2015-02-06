@@ -38,8 +38,7 @@ ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;CN=
  Travis M. Vollmer;X-NUM-GUESTS=0:mailto:danimir@casetrek.com
 RECURRENCE-ID;TZID=Europe/Sofia:20140714T100000
 CREATED:20140515T075711Z
-DESCRIPTION:1. Report on previous weekly tasks. \n2. Plan of the present we
- ekly tasks.
+DESCRIPTION:1. Report on previous weekly tasks. \n2. Plan of the present weekly tasks.
 LAST-MODIFIED:20141125T074253Z
 LOCATION:In The Office
 SEQUENCE:1
