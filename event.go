@@ -171,8 +171,12 @@ func (e *Event) SetAlarm(alarmAfter time.Duration, callback func(*Event)) *Event
 	return e
 }
 
-func (e *Event) GetAlarm() string {
-	return ""
+func (e *Event) GetAlarmFunction() func(*Event) {
+	return e.alarmCallback
+}
+
+func (e *Event) GetAlarmTime() time.Duration {
+	return e.alarmTime
 }
 
 func (e *Event) SetWholeDayEvent(wholeDay bool) *Event {
