@@ -22,6 +22,7 @@ type Event struct {
 	id            string
 	sequence      int
 	attendees     []Attendee
+	organizer     Attendee
 	wholeDayEvent bool
 	inCalendar    *Calendar
 	alarmCallback func(*Event)
@@ -69,6 +70,13 @@ func (e *Event) GetImportedID() string {
 	return e.importedId
 }
 
+func (e *Event) SetOrganizer(a Attendee) *Event {
+	e.organizer = a
+	return e
+}
+func (e *Event) GetOrganizer() Attendee {
+	return e.organizer
+}
 func (e *Event) SetAttendee(a Attendee) *Event {
 	e.attendees = append(e.attendees, a)
 	return e

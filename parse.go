@@ -275,6 +275,7 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 		event.SetEnd(end)
 		event.SetWholeDayEvent(wholeDay)
 		event.SetAttendees(p.parseEventAttendees(eventData))
+		event.SetOrganizer(p.parseEventOrganizer(eventData))
 		event.SetCalendar(cal)
 		event.SetID(event.GenerateEventId())
 
@@ -452,6 +453,20 @@ func (p *Parser) parseEventAttendees(eventData string) []Attendee {
 	return attendeesObj
 }
 
+// parses the event organizer
+func (p *Parser) parseEventOrganizer(eventData string) Attendee {
+
+	re, _ := regexp.Compile(`ORGANIZER(:|;)(.*?\r\n)(\s.*?\r\n)*`)
+	organizerData := re.FindString(eventData)
+	organizerDataFormated := strings.Replace(organizerData, "\r\n ", "", 1)
+
+	a := NewAttendee()
+	a.SetEmail(p.parseAttendeeMail(organizerDataFormated))
+	a.SetName(p.parseOrganizerName(organizerDataFormated))
+
+	return *a
+}
+
 //  parse attendee properties
 func (p *Parser) parseAttendee(attendeeData string) Attendee {
 
@@ -461,7 +476,6 @@ func (p *Parser) parseAttendee(attendeeData string) Attendee {
 	a.SetRole(p.parseAttendeeRole(attendeeData))
 	a.SetStatus(p.parseAttendeeStatus(attendeeData))
 	a.SetType(p.parseAttendeeType(attendeeData))
-
 	return *a
 }
 
@@ -501,6 +515,16 @@ func (p *Parser) parseAttendeeName(attendeeData string) string {
 		return ""
 	}
 	return trimField(result, `(CN=|;)`)
+}
+
+// parses the organizer Name
+func (p *Parser) parseOrganizerName(orgData string) string {
+	re, _ := regexp.Compile(`CN=.*?:`)
+	result := re.FindString(orgData)
+	if result == "" {
+		return ""
+	}
+	return trimField(result, `(CN=|:)`)
 }
 
 // parses the attendee type
