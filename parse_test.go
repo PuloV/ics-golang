@@ -300,13 +300,86 @@ func TestCalendarEvents(t *testing.T) {
 		t.Errorf("Failed to get event by id with error %s \n", err)
 	}
 
+	//  event must have
 	start, _ := time.Parse(ics.IcsFormat, "20140714T100000Z")
 	end, _ := time.Parse(ics.IcsFormat, "20140714T110000Z")
+	created, _ := time.Parse(ics.IcsFormat, "20140515T075711Z")
+	modified, _ := time.Parse(ics.IcsFormat, "20141125T074253Z")
+	location := "In The Office"
+	desc := "1. Report on previous weekly tasks. \\n2. Plan of the present weekly tasks."
+	seq := 1
+	status := "CONFIRMED"
+	summary := "General Operative Meeting"
+	rrule := ""
+	attendeesCount := 3
+
+	org := new(ics.Attendee)
+	org.SetName("r.chupetlovska@gmail.com")
+	org.SetEmail("r.chupetlovska@gmail.com")
 
 	if event.GetStart() != start {
 		t.Errorf("Expected start %s , found %s  \n", start, event.GetStart())
 	}
+
 	if event.GetEnd() != end {
-		t.Errorf("Expected start %s , found %s  \n", end, event.GetEnd())
+		t.Errorf("Expected end %s , found %s  \n", end, event.GetEnd())
+	}
+
+	if event.GetCreated() != created {
+		t.Errorf("Expected created %s , found %s  \n", created, event.GetCreated())
+	}
+
+	if event.GetLastModified() != modified {
+		t.Errorf("Expected modified %s , found %s  \n", modified, event.GetLastModified())
+	}
+
+	if event.GetLocation() != location {
+		t.Errorf("Expected location %s , found %s  \n", location, event.GetLocation())
+	}
+
+	if event.GetDescription() != desc {
+		t.Errorf("Expected description %s , found %s  \n", desc, event.GetDescription())
+	}
+
+	if event.GetSequence() != seq {
+		t.Errorf("Expected sequence %s , found %s  \n", seq, event.GetSequence())
+	}
+
+	if event.GetStatus() != status {
+		t.Errorf("Expected status %s , found %s  \n", status, event.GetStatus())
+	}
+
+	if event.GetSummary() != summary {
+		t.Errorf("Expected status %s , found %s  \n", summary, event.GetSummary())
+	}
+
+	if event.GetRRule() != rrule {
+		t.Errorf("Expected rrule %s , found %s  \n", rrule, event.GetRRule())
+	}
+
+	if len(event.GetAttendees()) != attendeesCount {
+		t.Errorf("Expected attendeesCount %s , found %s  \n", attendeesCount, len(event.GetAttendees()))
+	}
+
+	eventOrg := event.GetOrganizer()
+	if *eventOrg != *org {
+		t.Errorf("Expected organizer %s , found %s  \n", org, event.GetOrganizer())
+	}
+
+	// SECOND EVENT WITHOUT ATTENDEES AND ORGANIZER
+
+	eventNoAttendees, errNoAttendees := calendar.GetEventByImportedID("mhhesb7si5968njvthgbiub7nk@google.com")
+	attendeesCount = 0
+	org = new(ics.Attendee)
+	if errNoAttendees != nil {
+		t.Errorf("Failed to get event by id with error %s \n", errNoAttendees)
+	}
+
+	if len(eventNoAttendees.GetAttendees()) != attendeesCount {
+		t.Errorf("Expected attendeesCount %s , found %s  \n", attendeesCount, len(event.GetAttendees()))
+	}
+
+	if eventNoAttendees.GetOrganizer() != nil {
+		t.Errorf("Expected organizer %s , found %s  \n", org, eventNoAttendees.GetOrganizer())
 	}
 }
