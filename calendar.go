@@ -7,13 +7,14 @@ import (
 )
 
 type Calendar struct {
-	name         string
-	description  string
-	version      float64
-	timezone     time.Location
-	events       []Event
-	eventsByDate map[string][]*Event
-	eventByID    map[string]*Event
+	name              string
+	description       string
+	version           float64
+	timezone          time.Location
+	events            []Event
+	eventsByDate      map[string][]*Event
+	eventByID         map[string]*Event
+	eventByImportedID map[string]*Event
 }
 
 func NewCalendar() *Calendar {
@@ -21,6 +22,7 @@ func NewCalendar() *Calendar {
 	// c.events = make([]Event)
 	c.eventsByDate = make(map[string][]*Event)
 	c.eventByID = make(map[string]*Event)
+	c.eventByImportedID = make(map[string]*Event)
 	return c
 }
 
@@ -85,6 +87,10 @@ func (c *Calendar) SetEvent(event Event) (*Calendar, error) {
 	// faster search by id
 	c.eventByID[event.GetID()] = eventPtr
 
+	if event.GetImportedID() != "" {
+		c.eventByImportedID[event.GetImportedID()] = eventPtr
+	}
+
 	mutex.Unlock()
 	return c, nil
 }
@@ -92,6 +98,15 @@ func (c *Calendar) SetEvent(event Event) (*Calendar, error) {
 //  get event by id
 func (c *Calendar) GetEventByID(eventID string) (*Event, error) {
 	event, ok := c.eventByID[eventID]
+	if ok {
+		return event, nil
+	}
+	return nil, errors.New(fmt.Sprintf("There is no event with id %s", eventID))
+}
+
+//  get event by imported id
+func (c *Calendar) GetEventByImportedID(eventID string) (*Event, error) {
+	event, ok := c.eventByImportedID[eventID]
 	if ok {
 		return event, nil
 	}
@@ -118,6 +133,7 @@ func (c *Calendar) GetEventsByDate(dateTime time.Time) ([]*Event, error) {
 	}
 	return nil, errors.New(fmt.Sprintf("There are no events for the day %s", day.Format(YmdHis)))
 }
+
 func (c *Calendar) String() string {
 	eventsCount := len(c.GetEvents())
 	name := c.GetName()
