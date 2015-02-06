@@ -428,6 +428,7 @@ func TestCalendarEventAttendees(t *testing.T) {
 	sue := attendees[1]
 	travis := attendees[2]
 
+	// check name
 	if john.GetName() != "John Smith" {
 		t.Errorf("Expected attendee name %s , found %s  \n", "John Smith", john.GetName())
 
@@ -441,6 +442,7 @@ func TestCalendarEventAttendees(t *testing.T) {
 
 	}
 
+	// check email
 	if john.GetEmail() != "j.smith@gmail.com" {
 		t.Errorf("Expected attendee email %s , found %s  \n", "j.smith@gmail.com", john.GetEmail())
 
@@ -451,6 +453,20 @@ func TestCalendarEventAttendees(t *testing.T) {
 	}
 	if travis.GetEmail() != "travis@dayrep.com" {
 		t.Errorf("Expected attendee email %s , found %s  \n", "travis@dayrep.com", travis.GetEmail())
+
+	}
+
+	// check status
+	if john.GetStatus() != "ACCEPTED" {
+		t.Errorf("Expected attendee status %s , found %s  \n", "ACCEPTED", john.GetStatus())
+
+	}
+	if sue.GetStatus() != "NEEDS-ACTION" {
+		t.Errorf("Expected attendee status %s , found %s  \n", "NEEDS-ACTION", sue.GetStatus())
+
+	}
+	if travis.GetStatus() != "NEEDS-ACTION" {
+		t.Errorf("Expected attendee status %s , found %s  \n", "NEEDS-ACTION", travis.GetStatus())
 
 	}
 
