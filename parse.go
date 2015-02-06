@@ -395,7 +395,7 @@ func (p *Parser) parseEventStart(eventData string) time.Time {
 // parses the event end time
 func (p *Parser) parseEventEnd(eventData string) time.Time {
 	reWholeDay, _ := regexp.Compile(`DTEND;VALUE=DATE:.*?\n`)
-	re, _ := regexp.Compile(`DTEND:.*?\n`)
+	re, _ := regexp.Compile(`DTEND(;TZID=.*?){0,1}:.*?\n`)
 	resultWholeDay := reWholeDay.FindString(eventData)
 	var t time.Time
 
@@ -406,7 +406,11 @@ func (p *Parser) parseEventEnd(eventData string) time.Time {
 	} else {
 		// event that has end hour and minute
 		result := re.FindString(eventData)
-		modified := trimField(result, "DTEND:")
+		modified := trimField(result, "DTEND(;TZID=.*?){0,1}:")
+
+		if !strings.Contains(modified, "Z") {
+			modified = fmt.Sprintf("%sZ", modified)
+		}
 		t, _ = time.Parse(IcsFormat, modified)
 	}
 	return t
