@@ -470,4 +470,18 @@ func TestCalendarEventAttendees(t *testing.T) {
 
 	}
 
+	// check role
+	if john.GetRole() != "REQ-PARTICIPANT" {
+		t.Errorf("Expected attendee status %s , found %s  \n", "REQ-PARTICIPANT", john.GetRole())
+
+	}
+	if sue.GetRole() != "REQ-PARTICIPANT" {
+		t.Errorf("Expected attendee status %s , found %s  \n", "REQ-PARTICIPANT", sue.GetRole())
+
+	}
+	if travis.GetRole() != "REQ-PARTICIPANT" {
+		t.Errorf("Expected attendee status %s , found %s  \n", "REQ-PARTICIPANT", travis.GetRole())
+
+	}
+
 }
