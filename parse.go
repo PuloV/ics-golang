@@ -285,13 +285,27 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 
 		fmt.Printf("%#v \n", event.GetRRule())
 		if RepeatRuleApply && event.GetRRule() != "" {
-			repeatedEvent := event.Clone()
-			repeatedEvent.SetImportedID("")
-			// fmt.Printf("Repeated : %s , Event : %s \n", repeatedEvent.GetImportedID(), event.GetImportedID())
 
 			// until field
 			reUntil, _ := regexp.Compile(`UNTIL=(\d)*T(\d)*Z(;){0,1}`)
 			untilString := trimField(reUntil.FindString(event.GetRRule()), `(UNTIL=|;)`)
+			//  set until date
+			var until *time.Time
+			if untilString == "" {
+				until = nil
+			} else {
+				untilV, _ := time.Parse(IcsFormat, untilString)
+				until = &untilV
+			}
+
+			// INTERVAL field
+			reInterval, _ := regexp.Compile(`INTERVAL=(\d)*(;){0,1}`)
+			intervalString := trimField(reInterval.FindString(event.GetRRule()), `(INTERVAL=|;)`)
+			interval, _ := strconv.Atoi(intervalString)
+
+			if interval == 0 {
+				interval = 1
+			}
 
 			// count field
 			reCount, _ := regexp.Compile(`COUNT=(\d)*(;){0,1}`)
@@ -315,18 +329,12 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 
 			fmt.Printf("%#v \n", reBD.FindString(event.GetRRule()))
 			fmt.Println("untilString", reUntil.FindString(event.GetRRule()))
-			//  set until date
-			var until *time.Time
-			if untilString == "" {
-				until = nil
-			} else {
-				untilV, _ := time.Parse(IcsFormat, untilString)
-				until = &untilV
-			}
+
+			//  set the freq modification of the dates
 			var years, days, months int
 			switch freq {
 			case "DAILY":
-				days = 1
+				days = interval
 				months = 0
 				years = 0
 				break
@@ -337,17 +345,20 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 				break
 			case "MONTHLY":
 				days = 0
-				months = 1
+				months = interval
 				years = 0
 				break
 			case "YEARLY":
 				days = 0
 				months = 0
-				years = 1
+				years = interval
 				break
 			}
+
+			// number of current repeats
 			current := 0
-			freqDate := start.AddDate(0, 0, 1)
+			// the current date in the main loop
+			freqDate := start
 
 			fmt.Println(byday)
 			// loops by freq
@@ -355,25 +366,40 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 				weekDays := freqDate
 
 				// check repeating by month
-				if (bymonth == "" || strings.Contains(bymonth, weekDays.Format("1"))) && byday != "" {
+				if bymonth == "" || strings.Contains(bymonth, weekDays.Format("1")) {
 
-					// loops the weekdays
-					for i := 0; i < 7; i++ {
-						day := parseDayNameToIcsName(weekDays.Format("Mon"))
-						if strings.Contains(byday, day) {
-							current++
-							count--
-							newE := *event
-							newE.SetStart(weekDays)
-							newE.SetEnd(weekDays)
-							newE.SetID(newE.GenerateEventId())
-							newE.SetSequence(current)
-							cal.SetEvent(newE)
-							fmt.Println("repeating", weekDays.Format("Mon"), weekDays.Format(YmdHis))
+					if byday != "" {
+						// loops the weekdays
+						for i := 0; i < 7; i++ {
+							day := parseDayNameToIcsName(weekDays.Format("Mon"))
+							if strings.Contains(byday, day) && weekDays != start {
+								current++
+								count--
+								newE := *event
+								newE.SetStart(weekDays)
+								newE.SetEnd(weekDays)
+								newE.SetID(newE.GenerateEventId())
+								newE.SetSequence(current)
+								cal.SetEvent(newE)
+								fmt.Println("repeating", weekDays.Format("Mon"), weekDays.Format(YmdHis))
+							}
+							weekDays = weekDays.AddDate(0, 0, 1)
 						}
-						weekDays = weekDays.AddDate(0, 0, 1)
+					} else {
+						//  we dont have loop by day so we put it on the same day
+						current++
+						count--
+						newE := *event
+						newE.SetStart(weekDays)
+						newE.SetEnd(weekDays)
+						newE.SetID(newE.GenerateEventId())
+						newE.SetSequence(current)
+						cal.SetEvent(newE)
+						fmt.Println("repeating without byday field", weekDays.Format("Mon"), weekDays.Format(YmdHis))
 					}
+
 				}
+
 				freqDate = freqDate.AddDate(years, months, days)
 				if current > MaxRepeats || count == 0 {
 					break
