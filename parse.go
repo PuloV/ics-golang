@@ -289,15 +289,27 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 			repeatedEvent.SetImportedID("")
 			// fmt.Printf("Repeated : %s , Event : %s \n", repeatedEvent.GetImportedID(), event.GetImportedID())
 
+			// until field
 			reUntil, _ := regexp.Compile(`UNTIL=(\d)*T(\d)*Z(;){0,1}`)
 			untilString := trimField(reUntil.FindString(event.GetRRule()), `(UNTIL=|;)`)
 
+			// count field
+			reCount, _ := regexp.Compile(`COUNT=(\d)*(;){0,1}`)
+			countString := trimField(reCount.FindString(event.GetRRule()), `(COUNT=|;)`)
+			count, _ := strconv.Atoi(countString)
+			if count == 0 {
+				count = MaxRepeats
+			}
+
+			// freq field
 			reFr, _ := regexp.Compile(`FREQ=.*?;`)
 			freq := trimField(reFr.FindString(event.GetRRule()), `(FREQ=|;)`)
 
+			// by month field
 			reBM, _ := regexp.Compile(`BYMONTH=.*?;`)
 			bymonth := trimField(reBM.FindString(event.GetRRule()), `(BYMONTH=|;)`)
 
+			// by day field
 			reBD, _ := regexp.Compile(`BYDAY=.*?(;|){0,1}\z`)
 			byday := trimField(reBD.FindString(event.GetRRule()), `(BYDAY=|;)`)
 
@@ -336,31 +348,34 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 			}
 			current := 0
 			freqDate := start.AddDate(0, 0, 1)
-			if byday == "" {
-				return
-			}
+
 			fmt.Println(byday)
 			// loops by freq
 			for {
 				weekDays := freqDate
-				// loops the weekdays
-				for i := 0; i < 7; i++ {
-					day := parseDayNameToIcsName(weekDays.Format("Mon"))
-					if strings.Contains(byday, day) {
-						current++
-						newE := *event
-						newE.SetStart(weekDays)
-						newE.SetEnd(weekDays)
-						newE.SetID(newE.GenerateEventId())
-						newE.SetSequence(current)
-						cal.SetEvent(newE)
-						fmt.Println("repeating", weekDays.Format("Mon"), weekDays.Format(YmdHis))
-					}
-					weekDays = weekDays.AddDate(0, 0, 1)
-				}
 
+				// check repeating by month
+				if (bymonth == "" || strings.Contains(bymonth, weekDays.Format("1"))) && byday != "" {
+
+					// loops the weekdays
+					for i := 0; i < 7; i++ {
+						day := parseDayNameToIcsName(weekDays.Format("Mon"))
+						if strings.Contains(byday, day) {
+							current++
+							count--
+							newE := *event
+							newE.SetStart(weekDays)
+							newE.SetEnd(weekDays)
+							newE.SetID(newE.GenerateEventId())
+							newE.SetSequence(current)
+							cal.SetEvent(newE)
+							fmt.Println("repeating", weekDays.Format("Mon"), weekDays.Format(YmdHis))
+						}
+						weekDays = weekDays.AddDate(0, 0, 1)
+					}
+				}
 				freqDate = freqDate.AddDate(years, months, days)
-				if current > MaxRepeats {
+				if current > MaxRepeats || count == 0 {
 					break
 				}
 				if until != nil && until.Format(YmdHis) <= freqDate.Format(YmdHis) {
