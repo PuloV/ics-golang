@@ -387,15 +387,17 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 						}
 					} else {
 						//  we dont have loop by day so we put it on the same day
-						current++
-						count--
-						newE := *event
-						newE.SetStart(weekDays)
-						newE.SetEnd(weekDays)
-						newE.SetID(newE.GenerateEventId())
-						newE.SetSequence(current)
-						cal.SetEvent(newE)
-						fmt.Println("repeating without byday field", weekDays.Format("Mon"), weekDays.Format(YmdHis))
+						if weekDays != start {
+							current++
+							count--
+							newE := *event
+							newE.SetStart(weekDays)
+							newE.SetEnd(weekDays)
+							newE.SetID(newE.GenerateEventId())
+							newE.SetSequence(current)
+							cal.SetEvent(newE)
+							fmt.Println("repeating without byday field", weekDays.Format("Mon"), weekDays.Format(YmdHis))
+						}
 					}
 
 				}
