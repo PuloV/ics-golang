@@ -289,6 +289,9 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 			repeatedEvent.SetImportedID("")
 			// fmt.Printf("Repeated : %s , Event : %s \n", repeatedEvent.GetImportedID(), event.GetImportedID())
 
+			reUntil, _ := regexp.Compile(`UNTIL=(\d)*T(\d)*Z(;){0,1}`)
+			untilString := trimField(reUntil.FindString(event.GetRRule()), `(UNTIL=|;)`)
+
 			reFr, _ := regexp.Compile(`FREQ=.*?;`)
 			freq := trimField(reFr.FindString(event.GetRRule()), `(FREQ=|;)`)
 
@@ -297,7 +300,17 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 
 			reBD, _ := regexp.Compile(`BYDAY=.*?(;|){0,1}\z`)
 			byday := trimField(reBD.FindString(event.GetRRule()), `(BYDAY=|;)`)
+
 			fmt.Printf("%#v \n", reBD.FindString(event.GetRRule()))
+			fmt.Println("untilString", reUntil.FindString(event.GetRRule()))
+			//  set until date
+			var until *time.Time
+			if untilString == "" {
+				until = nil
+			} else {
+				untilV, _ := time.Parse(IcsFormat, untilString)
+				until = &untilV
+			}
 			var years, days, months int
 			switch freq {
 			case "DAILY":
@@ -322,7 +335,7 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 				break
 			}
 			current := 0
-			freqDate := start
+			freqDate := start.AddDate(0, 0, 1)
 			if byday == "" {
 				return
 			}
@@ -345,8 +358,12 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 					}
 					weekDays = weekDays.AddDate(0, 0, 1)
 				}
+
 				freqDate = freqDate.AddDate(years, months, days)
 				if current > MaxRepeats {
+					break
+				}
+				if until != nil && until.Format(YmdHis) <= freqDate.Format(YmdHis) {
 					break
 				}
 			}
