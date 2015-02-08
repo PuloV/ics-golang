@@ -17,6 +17,7 @@ func init() {
 	DeleteTempFiles = true
 	FilePath = "tmp/"
 	RepeatRuleApply = false
+	MaxRepeats = 10
 }
 
 type Parser struct {
@@ -282,7 +283,8 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 		cal.SetEvent(*event)
 		p.bufferedChan <- event
 
-		if RepeatRuleApply {
+		fmt.Printf("%#v \n", event.GetRRule())
+		if RepeatRuleApply && event.GetRRule() != "" {
 			repeatedEvent := event.Clone()
 			repeatedEvent.SetImportedID("")
 			// fmt.Printf("Repeated : %s , Event : %s \n", repeatedEvent.GetImportedID(), event.GetImportedID())
@@ -293,10 +295,68 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 			reBM, _ := regexp.Compile(`BYMONTH=.*?;`)
 			bymonth := trimField(reBM.FindString(event.GetRRule()), `(BYMONTH=|;)`)
 
-			reBD, _ := regexp.Compile(`BYDAY=.*?;`)
+			reBD, _ := regexp.Compile(`BYDAY=.*?(;|){0,1}\z`)
 			byday := trimField(reBD.FindString(event.GetRRule()), `(BYDAY=|;)`)
+			fmt.Printf("%#v \n", reBD.FindString(event.GetRRule()))
+			var years, days, months int
+			switch freq {
+			case "DAILY":
+				days = 1
+				months = 0
+				years = 0
+				break
+			case "WEEKLY":
+				days = 7
+				months = 0
+				years = 0
+				break
+			case "MONTHLY":
+				days = 0
+				months = 1
+				years = 0
+				break
+			case "YEARLY":
+				days = 0
+				months = 0
+				years = 1
+				break
+			}
+			current := 0
+			freqDate := start
+			if byday == "" {
+				return
+			}
+			fmt.Println(byday)
+			// loops by freq
+			for {
+				weekDays := freqDate
+				// loops the weekdays
+				for i := 0; i < 7; i++ {
+					day := parseDayNameToIcsName(weekDays.Format("Mon"))
+					if strings.Contains(byday, day) {
+						current++
+						newE := *event
+						newE.SetStart(weekDays)
+						newE.SetEnd(weekDays)
+						newE.SetID(newE.GenerateEventId())
+						newE.SetSequence(current)
+						cal.SetEvent(newE)
+						fmt.Println("repeating", weekDays.Format("Mon"), weekDays.Format(YmdHis))
+					}
+					weekDays = weekDays.AddDate(0, 0, 1)
+				}
+				freqDate = freqDate.AddDate(years, months, days)
+				if current > MaxRepeats {
+					break
+				}
+			}
 
-			fmt.Println(freq, bymonth, byday)
+			// fmt.Println("Before", tmpDate.Format(YmdHis), tmpDate.Format("Mon"))
+
+			// tmpDate = tmpDate.Add(d)
+			// fmt.Println("After 1 day", tmpDate.Format(YmdHis), tmpDate.Format("Mon"))
+			fmt.Println(start, freq, bymonth, byday)
+
 		}
 		// if event.GetRRule() != "" {
 		// 	fmt.Printf("%#v \n", event.GetRRule())

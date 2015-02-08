@@ -26,6 +26,9 @@ var FilePath string
 // if RepeatRuleApply is true , the rrule will create new objects for the repeated events
 var RepeatRuleApply bool
 
+// max of the rrule repeat for single event
+var MaxRepeats int
+
 //  unixtimestamp
 const uts = "1136239445"
 
@@ -96,4 +99,36 @@ func trimField(field, cutset string) string {
 func fileExists(fileName string) bool {
 	_, err := os.Stat(fileName)
 	return err == nil
+}
+
+func parseDayNameToIcsName(day string) string {
+	var dow string
+	switch day {
+	case "Mon":
+		dow = "MO"
+		break
+	case "Tue":
+		dow = "TU"
+		break
+	case "Wed":
+		dow = "WE"
+		break
+	case "Thu":
+		dow = "TH"
+		break
+	case "Fri":
+		dow = "FR"
+		break
+	case "Sat":
+		dow = "ST"
+		break
+	case "Sun":
+		dow = "SU"
+		break
+	default:
+		// fmt.Println("DEFAULT :", start.Format("Mon"))
+		dow = ""
+		break
+	}
+	return dow
 }
