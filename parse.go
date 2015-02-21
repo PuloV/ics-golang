@@ -283,7 +283,6 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 		cal.SetEvent(*event)
 		p.bufferedChan <- event
 
-		fmt.Printf("%#v \n", event.GetRRule())
 		if RepeatRuleApply && event.GetRRule() != "" {
 
 			// until field
@@ -327,8 +326,8 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 			reBD, _ := regexp.Compile(`BYDAY=.*?(;|){0,1}\z`)
 			byday := trimField(reBD.FindString(event.GetRRule()), `(BYDAY=|;)`)
 
-			fmt.Printf("%#v \n", reBD.FindString(event.GetRRule()))
-			fmt.Println("untilString", reUntil.FindString(event.GetRRule()))
+			// fmt.Printf("%#v \n", reBD.FindString(event.GetRRule()))
+			// fmt.Println("untilString", reUntil.FindString(event.GetRRule()))
 
 			//  set the freq modification of the dates
 			var years, days, months int
@@ -360,7 +359,6 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 			// the current date in the main loop
 			freqDate := start
 
-			fmt.Println(byday)
 			// loops by freq
 			for {
 				weekDays := freqDate
@@ -380,8 +378,10 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 								newE.SetEnd(weekDays)
 								newE.SetID(newE.GenerateEventId())
 								newE.SetSequence(current)
-								cal.SetEvent(newE)
-								fmt.Println("repeating", weekDays.Format("Mon"), weekDays.Format(YmdHis))
+								if until == nil || (until != nil && until.Format(YmdHis) >= weekDays.Format(YmdHis)) {
+									cal.SetEvent(newE)
+								}
+
 							}
 							weekDays = weekDays.AddDate(0, 0, 1)
 						}
@@ -395,8 +395,10 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 							newE.SetEnd(weekDays)
 							newE.SetID(newE.GenerateEventId())
 							newE.SetSequence(current)
-							cal.SetEvent(newE)
-							fmt.Println("repeating without byday field", weekDays.Format("Mon"), weekDays.Format(YmdHis))
+							if until == nil || (until != nil && until.Format(YmdHis) >= weekDays.Format(YmdHis)) {
+								cal.SetEvent(newE)
+							}
+
 						}
 					}
 
@@ -406,22 +408,14 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 				if current > MaxRepeats || count == 0 {
 					break
 				}
+
 				if until != nil && until.Format(YmdHis) <= freqDate.Format(YmdHis) {
 					break
 				}
 			}
 
-			// fmt.Println("Before", tmpDate.Format(YmdHis), tmpDate.Format("Mon"))
-
-			// tmpDate = tmpDate.Add(d)
-			// fmt.Println("After 1 day", tmpDate.Format(YmdHis), tmpDate.Format("Mon"))
-			fmt.Println(start, freq, bymonth, byday)
-
 		}
-		// if event.GetRRule() != "" {
-		// 	fmt.Printf("%#v \n", event.GetRRule())
-		// }
-		// break
+
 	}
 
 }
