@@ -203,7 +203,7 @@ func (p *Parser) parseICalContent(iCalContent string) {
 
 // explodes the ICal content to array of events and calendar info
 func explodeICal(iCalContent string) ([]string, string) {
-	reEvents, _ := regexp.Compile(`(BEGIN:VEVENT(.*\n)*?END:VEVENT\r\n)`)
+	reEvents, _ := regexp.Compile(`(BEGIN:VEVENT(.*\n)*?END:VEVENT\r?\n)`)
 	allEvents := reEvents.FindAllString(iCalContent, len(iCalContent))
 	calInfo := reEvents.ReplaceAllString(iCalContent, "")
 	return allEvents, calInfo
@@ -551,14 +551,14 @@ func (p *Parser) parseEventLocation(eventData string) string {
 // parses the event attendees
 func (p *Parser) parseEventAttendees(eventData string) []*Attendee {
 	attendeesObj := []*Attendee{}
-	re, _ := regexp.Compile(`ATTENDEE(:|;)(.*?\r\n)(\s.*?\r\n)*`)
+	re, _ := regexp.Compile(`ATTENDEE(:|;)(.*?\r?\n)(\s.*?\r?\n)*`)
 	attendees := re.FindAllString(eventData, len(eventData))
 
 	for _, attendeeData := range attendees {
 		if attendeeData == "" {
 			continue
 		}
-		attendee := p.parseAttendee(strings.Replace(attendeeData, "\r\n ", "", 1))
+		attendee := p.parseAttendee(strings.Replace(strings.Replace(attendeeData, "\r", "", 1), "\n ", "", 1))
 		//  check for any fields set
 		if attendee.GetEmail() != "" || attendee.GetName() != "" || attendee.GetRole() != "" || attendee.GetStatus() != "" || attendee.GetType() != "" {
 			attendeesObj = append(attendeesObj, attendee)
@@ -570,12 +570,12 @@ func (p *Parser) parseEventAttendees(eventData string) []*Attendee {
 // parses the event organizer
 func (p *Parser) parseEventOrganizer(eventData string) *Attendee {
 
-	re, _ := regexp.Compile(`ORGANIZER(:|;)(.*?\r\n)(\s.*?\r\n)*`)
+	re, _ := regexp.Compile(`ORGANIZER(:|;)(.*?\r?\n)(\s.*?\r?\n)*`)
 	organizerData := re.FindString(eventData)
 	if organizerData == "" {
 		return nil
 	}
-	organizerDataFormated := strings.Replace(organizerData, "\r\n ", "", 1)
+	organizerDataFormated := strings.Replace(strings.Replace(organizerData, "\r", "", 1), "\n ", "", 1)
 
 	a := NewAttendee()
 	a.SetEmail(p.parseAttendeeMail(organizerDataFormated))
