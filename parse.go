@@ -88,7 +88,7 @@ func New() *Parser {
 				}
 
 				// parse the ICal calendar
-				p.parseICalContent(iCalContent)
+				p.parseICalContent(iCalContent, link)
 
 				mutex.Lock()
 				// marks that we have parsed 1 calendar and we have statusCalendars -1 left to be parsed
@@ -182,7 +182,7 @@ func (p *Parser) getICal(url string) (string, error) {
 // ======================== CALENDAR PARSING ===================
 
 // parses the iCal formated string to a calendar object
-func (p *Parser) parseICalContent(iCalContent string) {
+func (p *Parser) parseICalContent(iCalContent, url string) {
 	ical := NewCalendar()
 	p.parsedCalendars = append(p.parsedCalendars, ical)
 
@@ -195,6 +195,7 @@ func (p *Parser) parseICalContent(iCalContent string) {
 	ical.SetDesc(p.parseICalDesc(calInfo))
 	ical.SetVersion(p.parseICalVersion(calInfo))
 	ical.SetTimezone(p.parseICalTimezone(calInfo))
+	ical.SetUrl(url)
 
 	// parse the events and add them to ical
 	p.parseEvents(ical, eventsData)

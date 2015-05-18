@@ -9,6 +9,7 @@ import (
 type Calendar struct {
 	name              string
 	description       string
+	url               string
 	version           float64
 	timezone          time.Location
 	events            []Event
@@ -138,5 +139,15 @@ func (c *Calendar) String() string {
 	eventsCount := len(c.GetEvents())
 	name := c.GetName()
 	desc := c.GetDesc()
-	return fmt.Sprintf("Calendar %s about %s has %d events", name, desc, eventsCount)
+	url := c.GetUrl()
+	return fmt.Sprintf("Calendar %s about %s has %d events. Downloaded from %s .", name, desc, eventsCount, url)
+}
+
+func (c *Calendar) SetUrl(u string) *Calendar {
+	c.url = u
+	return c
+}
+
+func (c *Calendar) GetUrl() string {
+	return c.url
 }
