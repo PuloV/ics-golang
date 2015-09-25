@@ -29,6 +29,14 @@ var RepeatRuleApply bool
 // max of the rrule repeat for single event
 var MaxRepeats int
 
+func SetMaxRepeats(n int) {
+	MaxRepeats = n
+}
+
+func SetRepeatRuleApply(y bool) {
+	RepeatRuleApply = y
+}
+
 //  unixtimestamp
 const uts = "1136239445"
 
