@@ -153,9 +153,7 @@ func (p *Parser) getICal(url string) (string, error) {
 		if errDownload != nil {
 			return "", errDownload
 		}
-
 	} else { //  use a file from local storage
-
 		//  check if file exists
 		if fileExists(url) {
 			fileName = url
@@ -199,7 +197,6 @@ func (p *Parser) parseICalContent(iCalContent, url string) {
 
 	// parse the events and add them to ical
 	p.parseEvents(ical, eventsData)
-
 }
 
 // explodes the ICal content to array of events and calendar info
@@ -280,12 +277,12 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 		event.SetOrganizer(p.parseEventOrganizer(eventData))
 		event.SetCalendar(cal)
 		event.SetID(event.GenerateEventId())
+		duration := end.Sub(start)
 
 		cal.SetEvent(*event)
 		p.bufferedChan <- event
 
 		if RepeatRuleApply && event.GetRRule() != "" {
-
 			// until field
 			reUntil, _ := regexp.Compile(`UNTIL=(\d)*T(\d)*Z(;){0,1}`)
 			untilString := trimField(reUntil.FindString(event.GetRRule()), `(UNTIL=|;)`)
@@ -327,9 +324,6 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 			reBD, _ := regexp.Compile(`BYDAY=.*?(;|){0,1}\z`)
 			byday := trimField(reBD.FindString(event.GetRRule()), `(BYDAY=|;)`)
 
-			// fmt.Printf("%#v \n", reBD.FindString(event.GetRRule()))
-			// fmt.Println("untilString", reUntil.FindString(event.GetRRule()))
-
 			//  set the freq modification of the dates
 			var years, days, months int
 			switch freq {
@@ -366,7 +360,6 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 
 				// check repeating by month
 				if bymonth == "" || strings.Contains(bymonth, weekDays.Format("1")) {
-
 					if byday != "" {
 						// loops the weekdays
 						for i := 0; i < 7; i++ {
@@ -376,7 +369,7 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 								count--
 								newE := *event
 								newE.SetStart(weekDays)
-								newE.SetEnd(weekDays)
+								newE.SetEnd(weekDays.Add(duration))
 								newE.SetID(newE.GenerateEventId())
 								newE.SetSequence(current)
 								if until == nil || (until != nil && until.Format(YmdHis) >= weekDays.Format(YmdHis)) {
@@ -393,16 +386,14 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 							count--
 							newE := *event
 							newE.SetStart(weekDays)
-							newE.SetEnd(weekDays)
+							newE.SetEnd(weekDays.Add(duration))
 							newE.SetID(newE.GenerateEventId())
 							newE.SetSequence(current)
 							if until == nil || (until != nil && until.Format(YmdHis) >= weekDays.Format(YmdHis)) {
 								cal.SetEvent(newE)
 							}
-
 						}
 					}
-
 				}
 
 				freqDate = freqDate.AddDate(years, months, days)
@@ -414,11 +405,8 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 					break
 				}
 			}
-
 		}
-
 	}
-
 }
 
 // parses the event summary
