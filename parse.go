@@ -8,401 +8,216 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
+var (
+	urlRegex    = regexp.MustCompile(`http(s){0,1}:\/\/`)
+	eventsRegex = regexp.MustCompile(`(BEGIN:VEVENT(.*\n)*?END:VEVENT\r?\n)`)
+
+	calNameRegex     = regexp.MustCompile(`X-WR-CALNAME:.*?\n`)
+	calDescRegex     = regexp.MustCompile(`X-WR-CALDESC:.*?\n`)
+	calVersionRegex  = regexp.MustCompile(`VERSION:.*?\n`)
+	calTimezoneRegex = regexp.MustCompile(`X-WR-TIMEZONE:.*?\n`)
+
+	eventSummaryRegex       = regexp.MustCompile(`SUMMARY:.*?\n`)
+	eventStatusRegex        = regexp.MustCompile(`STATUS:.*?\n`)
+	eventDescRegex          = regexp.MustCompile(`DESCRIPTION:.*?\n`)
+	eventUIDRegex           = regexp.MustCompile(`UID:.*?\n`)
+	eventClassRegex         = regexp.MustCompile(`CLASS:.*?\n`)
+	eventSequenceRegex      = regexp.MustCompile(`SEQUENCE:.*?\n`)
+	eventCreatedRegex       = regexp.MustCompile(`CREATED:.*?\n`)
+	eventModifiedRegex      = regexp.MustCompile(`LAST-MODIFIED:.*?\n`)
+	eventStartRegex         = regexp.MustCompile(`DTSTART(;TZID=.*?){0,1}:.*?\n`)
+	eventStartWholeDayRegex = regexp.MustCompile(`DTSTART;VALUE=DATE:.*?\n`)
+	eventEndRegex           = regexp.MustCompile(`DTEND(;TZID=.*?){0,1}:.*?\n`)
+	eventEndWholeDayRegex   = regexp.MustCompile(`DTEND;VALUE=DATE:.*?\n`)
+	eventRRuleRegex         = regexp.MustCompile(`RRULE:.*?\n`)
+	eventLocationRegex      = regexp.MustCompile(`LOCATION:.*?\n`)
+
+	attendeesRegex = regexp.MustCompile(`ATTENDEE(:|;)(.*?\r?\n)(\s.*?\r?\n)*`)
+	organizerRegex = regexp.MustCompile(`ORGANIZER(:|;)(.*?\r?\n)(\s.*?\r?\n)*`)
+
+	attendeeEmailRegex  = regexp.MustCompile(`mailto:.*?\n`)
+	attendeeStatusRegex = regexp.MustCompile(`PARTSTAT=.*?;`)
+	attendeeRoleRegex   = regexp.MustCompile(`ROLE=.*?;`)
+	attendeeNameRegex   = regexp.MustCompile(`CN=.*?;`)
+	organizerNameRegex  = regexp.MustCompile(`CN=.*?:`)
+	attendeeTypeRegex   = regexp.MustCompile(`CUTYPE=.*?;`)
+
+	untilRegex    = regexp.MustCompile(`UNTIL=(\d)*T(\d)*Z(;){0,1}`)
+	intervalRegex = regexp.MustCompile(`INTERVAL=(\d)*(;){0,1}`)
+	countRegex    = regexp.MustCompile(`COUNT=(\d)*(;){0,1}`)
+	freqRegex     = regexp.MustCompile(`FREQ=.*?;`)
+	byMonthRegex  = regexp.MustCompile(`BYMONTH=.*?;`)
+	byDayRegex    = regexp.MustCompile(`BYDAY=.*?(;|){0,1}\z`)
+)
+
 func init() {
-	mutex = new(sync.Mutex)
-	DeleteTempFiles = true
 	FilePath = "tmp/"
 	RepeatRuleApply = false
 	MaxRepeats = 10
 }
 
-type Parser struct {
-	inputChan       chan string
-	outputChan      chan *Event
-	bufferedChan    chan *Event
-	errorsOccured   []error
-	parsedCalendars []*Calendar
-	parsedEvents    []*Event
-	statusCalendars int
-	wg              *sync.WaitGroup
-}
-
-// creates new parser
-func New() *Parser {
-	p := new(Parser)
-	p.inputChan = make(chan string)
-	p.outputChan = make(chan *Event)
-	p.bufferedChan = make(chan *Event)
-	p.errorsOccured = []error{}
-	p.wg = new(sync.WaitGroup)
-	p.parsedCalendars = []*Calendar{}
-	p.parsedEvents = []*Event{}
-
-	// buffers the events output chan
-	go func() {
-		for {
-			if len(p.parsedEvents) > 0 {
-				select {
-				case p.outputChan <- p.parsedEvents[0]:
-					p.parsedEvents = p.parsedEvents[1:]
-				case event := <-p.bufferedChan:
-					p.parsedEvents = append(p.parsedEvents, event)
-				}
-			} else {
-				event := <-p.bufferedChan
-				p.parsedEvents = append(p.parsedEvents, event)
-			}
-		}
-	}()
-
-	go func(input chan string) {
-		// endless loop for getting the ics urls
-		for {
-			link := <-input
-
-			// mark calendar in the wait group as not parsed
-			p.wg.Add(1)
-
-			// marks that we have statusCalendars +1 calendars to be parsed
-			mutex.Lock()
-			p.statusCalendars++
-			mutex.Unlock()
-
-			go func(link string) {
-				// mark calendar in the wait group as  parsed
-				defer p.wg.Done()
-
-				iCalContent, err := p.getICal(link)
-				if err != nil {
-					p.errorsOccured = append(p.errorsOccured, err)
-
-					mutex.Lock()
-					// marks that we have parsed 1 calendar and we have statusCalendars -1 left to be parsed
-					p.statusCalendars--
-					mutex.Unlock()
-					return
-				}
-
-				// parse the ICal calendar
-				p.parseICalContent(iCalContent, link)
-
-				mutex.Lock()
-				// marks that we have parsed 1 calendar and we have statusCalendars -1 left to be parsed
-				p.statusCalendars--
-				mutex.Unlock()
-
-			}(link)
-		}
-	}(p.inputChan)
-	// p.wg.Wait()
-	// return p.inputChan
-	return p
-}
-
-//  returns the chan for calendar urls
-func (p *Parser) GetInputChan() chan string {
-	return p.inputChan
-}
-
-// returns the chan where will be received events
-func (p *Parser) GetOutputChan() chan *Event {
-	return p.outputChan
-}
-
-// returns the chan where will be received events
-func (p *Parser) GetCalendars() ([]*Calendar, error) {
-	if !p.Done() {
-		return nil, errors.New("Calendars not parsed")
+func ParseCalendar(url string) (Calendar, error) {
+	content, err := getICal(url)
+	if err != nil {
+		return Calendar{}, err
 	}
-	return p.parsedCalendars, nil
+
+	return parseICalContent(content, url), nil
 }
 
-// returns the array with the errors occurred while parsing the events
-func (p *Parser) GetErrors() ([]error, error) {
-	if !p.Done() {
-		return nil, errors.New("Calendars not parsed")
-	}
-	return p.errorsOccured, nil
-}
+func getICal(url string) (fileName string, err error) {
+	var isRemote = urlRegex.FindString(url) != ""
 
-// is everything is parsed
-func (p *Parser) Done() bool {
-	return p.statusCalendars == 0
-}
-
-// wait until everything is parsed
-func (p *Parser) Wait() {
-	p.wg.Wait()
-}
-
-//  get the data from the calendar
-func (p *Parser) getICal(url string) (string, error) {
-	re, _ := regexp.Compile(`http(s){0,1}:\/\/`)
-
-	var fileName string
-	var errDownload error
-
-	if re.FindString(url) != "" {
-		// download the file and store it local
-		fileName, errDownload = downloadFromUrl(url)
-
-		if errDownload != nil {
-			return "", errDownload
+	if isRemote {
+		fileName, err = downloadFromUrl(url)
+		if err != nil {
+			return
 		}
-
-	} else { //  use a file from local storage
-
-		//  check if file exists
+	} else {
 		if fileExists(url) {
 			fileName = url
 		} else {
-			err := fmt.Sprintf("File %s does not exists", url)
-			return "", errors.New(err)
+			err = errors.New(fmt.Sprintf("File %s does not exists", url))
+			return
 		}
 	}
 
-	//  read the file with the ical data
-	fileContent, errReadFile := ioutil.ReadFile(fileName)
-
-	if errReadFile != nil {
-		return "", errReadFile
+	content, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		return
 	}
 
-	if DeleteTempFiles && re.FindString(url) != "" {
+	if isRemote {
 		os.Remove(fileName)
 	}
 
-	return fmt.Sprintf("%s", fileContent), nil
+	return string(content), nil
 }
 
-// ======================== CALENDAR PARSING ===================
-
-// parses the iCal formated string to a calendar object
-func (p *Parser) parseICalContent(iCalContent, url string) {
-	ical := NewCalendar()
-	p.parsedCalendars = append(p.parsedCalendars, ical)
-
-	// split the data into calendar info and events data
-	eventsData, calInfo := explodeICal(iCalContent)
-	idCounter++
-
-	// fill the calendar fields
-	ical.SetName(p.parseICalName(calInfo))
-	ical.SetDesc(p.parseICalDesc(calInfo))
-	ical.SetVersion(p.parseICalVersion(calInfo))
-	ical.SetTimezone(p.parseICalTimezone(calInfo))
-	ical.SetUrl(url)
-
-	// parse the events and add them to ical
-	p.parseEvents(ical, eventsData)
-
+func parseICalContent(content, url string) Calendar {
+	cal := NewCalendar()
+	eventsData, info := explodeICal(content)
+	cal.Name = parseICalName(info)
+	cal.Description = parseICalDesc(info)
+	cal.Version = parseICalVersion(info)
+	cal.Timezone = parseICalTimezone(info)
+	cal.URL = url
+	parseEvents(&cal, eventsData)
+	return cal
 }
 
-// explodes the ICal content to array of events and calendar info
-func explodeICal(iCalContent string) ([]string, string) {
-	reEvents, _ := regexp.Compile(`(BEGIN:VEVENT(.*\n)*?END:VEVENT\r?\n)`)
-	allEvents := reEvents.FindAllString(iCalContent, len(iCalContent))
-	calInfo := reEvents.ReplaceAllString(iCalContent, "")
-	return allEvents, calInfo
+func explodeICal(content string) ([]string, string) {
+	events := eventsRegex.FindAllString(content, -1)
+	info := eventsRegex.ReplaceAllString(content, "")
+	return events, info
 }
 
-// parses the iCal Name
-func (p *Parser) parseICalName(iCalContent string) string {
-	re, _ := regexp.Compile(`X-WR-CALNAME:.*?\n`)
-	result := re.FindString(iCalContent)
-	return trimField(result, "X-WR-CALNAME:")
+func parseICalName(content string) string {
+	return trimField(calNameRegex.FindString(content), "X-WR-CALNAME:")
 }
 
-// parses the iCal description
-func (p *Parser) parseICalDesc(iCalContent string) string {
-	re, _ := regexp.Compile(`X-WR-CALDESC:.*?\n`)
-	result := re.FindString(iCalContent)
-	return trimField(result, "X-WR-CALDESC:")
+func parseICalDesc(content string) string {
+	return trimField(calDescRegex.FindString(content), "X-WR-CALDESC:")
 }
 
-// parses the iCal version
-func (p *Parser) parseICalVersion(iCalContent string) float64 {
-	re, _ := regexp.Compile(`VERSION:.*?\n`)
-	result := re.FindString(iCalContent)
-	// parse the version result to float
-	ver, _ := strconv.ParseFloat(trimField(result, "VERSION:"), 64)
-	return ver
+func parseICalVersion(content string) float64 {
+	version, _ := strconv.ParseFloat(trimField(calVersionRegex.FindString(content), "VERSION:"), 64)
+	return version
 }
 
-// parses the iCal timezone
-func (p *Parser) parseICalTimezone(iCalContent string) time.Location {
-	re, _ := regexp.Compile(`X-WR-TIMEZONE:.*?\n`)
-	result := re.FindString(iCalContent)
-
-	// parse the timezone result to time.Location
-	timezone := trimField(result, "X-WR-TIMEZONE:")
-	// create location instance
+func parseICalTimezone(content string) *time.Location {
+	timezone := trimField(calTimezoneRegex.FindString(content), "X-WR-TIMEZONE:")
 	loc, err := time.LoadLocation(timezone)
-
-	// if fails with the timezone => go Local
 	if err != nil {
-		p.errorsOccured = append(p.errorsOccured, err)
-		loc, _ = time.LoadLocation("UTC")
+		return time.Local
 	}
-	return *loc
+
+	return loc
 }
 
-// ======================== EVENTS PARSING ===================
-
-// parses the iCal events Data
-func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
+func parseEvents(cal *Calendar, eventsData []string) {
 	for _, eventData := range eventsData {
 		event := NewEvent()
 
-		start := p.parseEventStart(eventData)
-		end := p.parseEventEnd(eventData)
-		// whole day event when both times are 00:00:00
+		start := parseEventStart(eventData)
+		end := parseEventEnd(eventData)
 		wholeDay := start.Hour() == 0 && end.Hour() == 0 && start.Minute() == 0 && end.Minute() == 0 && start.Second() == 0 && end.Second() == 0
 
-		event.SetStatus(p.parseEventStatus(eventData))
-		event.SetSummary(p.parseEventSummary(eventData))
-		event.SetDescription(p.parseEventDescription(eventData))
-		event.SetImportedID(p.parseEventId(eventData))
-		event.SetClass(p.parseEventClass(eventData))
-		event.SetSequence(p.parseEventSequence(eventData))
-		event.SetCreated(p.parseEventCreated(eventData))
-		event.SetLastModified(p.parseEventModified(eventData))
-		event.SetRRule(p.parseEventRRule(eventData))
-		event.SetLocation(p.parseEventLocation(eventData))
-		event.SetStart(start)
-		event.SetEnd(end)
-		event.SetWholeDayEvent(wholeDay)
-		event.SetAttendees(p.parseEventAttendees(eventData))
-		event.SetOrganizer(p.parseEventOrganizer(eventData))
-		event.SetCalendar(cal)
-		event.SetID(event.GenerateEventId())
+		event.Status = parseEventStatus(eventData)
+		event.Summary = parseEventSummary(eventData)
+		event.Description = parseEventDescription(eventData)
+		event.ImportedID = parseEventId(eventData)
+		event.Class = parseEventClass(eventData)
+		event.Sequence = parseEventSequence(eventData)
+		event.Created = parseEventCreated(eventData)
+		event.Modified = parseEventModified(eventData)
+		event.RRule = parseEventRRule(eventData)
+		event.Location = parseEventLocation(eventData)
+		event.Start = start
+		event.End = end
+		event.WholeDayEvent = wholeDay
+		event.Attendees = parseEventAttendees(eventData)
+		event.Organizer = parseEventOrganizer(eventData)
+		event.ID = event.GenerateEventId()
+		duration := end.Sub(start)
+		cal.Events = append(cal.Events, *event)
 
-		cal.SetEvent(*event)
-		p.bufferedChan <- event
+		if RepeatRuleApply && event.RRule != "" {
+			until := parseUntil(event.RRule)
+			interval := parseInterval(event.RRule)
+			count := parseCount(event.RRule)
+			freq := trimField(freqRegex.FindString(event.RRule), `(FREQ=|;)`)
+			byMonth := trimField(byMonthRegex.FindString(event.RRule), `(BYMONTH=|;)`)
+			byDay := trimField(byDayRegex.FindString(event.RRule), `(BYDAY=|;)`)
 
-		if RepeatRuleApply && event.GetRRule() != "" {
-
-			// until field
-			reUntil, _ := regexp.Compile(`UNTIL=(\d)*T(\d)*Z(;){0,1}`)
-			untilString := trimField(reUntil.FindString(event.GetRRule()), `(UNTIL=|;)`)
-			//  set until date
-			var until *time.Time
-			if untilString == "" {
-				until = nil
-			} else {
-				untilV, _ := time.Parse(IcsFormat, untilString)
-				until = &untilV
-			}
-
-			// INTERVAL field
-			reInterval, _ := regexp.Compile(`INTERVAL=(\d)*(;){0,1}`)
-			intervalString := trimField(reInterval.FindString(event.GetRRule()), `(INTERVAL=|;)`)
-			interval, _ := strconv.Atoi(intervalString)
-
-			if interval == 0 {
-				interval = 1
-			}
-
-			// count field
-			reCount, _ := regexp.Compile(`COUNT=(\d)*(;){0,1}`)
-			countString := trimField(reCount.FindString(event.GetRRule()), `(COUNT=|;)`)
-			count, _ := strconv.Atoi(countString)
-			if count == 0 {
-				count = MaxRepeats
-			}
-
-			// freq field
-			reFr, _ := regexp.Compile(`FREQ=.*?;`)
-			freq := trimField(reFr.FindString(event.GetRRule()), `(FREQ=|;)`)
-
-			// by month field
-			reBM, _ := regexp.Compile(`BYMONTH=.*?;`)
-			bymonth := trimField(reBM.FindString(event.GetRRule()), `(BYMONTH=|;)`)
-
-			// by day field
-			reBD, _ := regexp.Compile(`BYDAY=.*?(;|){0,1}\z`)
-			byday := trimField(reBD.FindString(event.GetRRule()), `(BYDAY=|;)`)
-
-			// fmt.Printf("%#v \n", reBD.FindString(event.GetRRule()))
-			// fmt.Println("untilString", reUntil.FindString(event.GetRRule()))
-
-			//  set the freq modification of the dates
 			var years, days, months int
+
 			switch freq {
 			case "DAILY":
 				days = interval
-				months = 0
-				years = 0
-				break
 			case "WEEKLY":
 				days = 7
-				months = 0
-				years = 0
-				break
 			case "MONTHLY":
-				days = 0
 				months = interval
-				years = 0
-				break
 			case "YEARLY":
-				days = 0
-				months = 0
 				years = interval
-				break
 			}
 
-			// number of current repeats
 			current := 0
-			// the current date in the main loop
 			freqDate := start
 
-			// loops by freq
 			for {
 				weekDays := freqDate
+				commitEvent := func() {
+					current++
+					count--
+					newEvent := event.Clone()
+					newEvent.Start = weekDays
+					newEvent.End = weekDays.Add(duration)
+					newEvent.ID = newEvent.GenerateEventId()
+					newEvent.Sequence = current
+					if until.IsZero() || (!until.IsZero() && until.Format(YmdHis) >= weekDays.Format(YmdHis)) {
+						cal.Events = append(cal.Events, *newEvent)
+					}
+				}
 
-				// check repeating by month
-				if bymonth == "" || strings.Contains(bymonth, weekDays.Format("1")) {
-
-					if byday != "" {
-						// loops the weekdays
+				if byMonth == "" || strings.Contains(byMonth, weekDays.Format("1")) {
+					if byDay != "" {
 						for i := 0; i < 7; i++ {
 							day := parseDayNameToIcsName(weekDays.Format("Mon"))
-							if strings.Contains(byday, day) && weekDays != start {
-								current++
-								count--
-								newE := *event
-								newE.SetStart(weekDays)
-								newE.SetEnd(weekDays)
-								newE.SetID(newE.GenerateEventId())
-								newE.SetSequence(current)
-								if until == nil || (until != nil && until.Format(YmdHis) >= weekDays.Format(YmdHis)) {
-									cal.SetEvent(newE)
-								}
-
+							if strings.Contains(byDay, day) && weekDays != start {
+								commitEvent()
 							}
 							weekDays = weekDays.AddDate(0, 0, 1)
 						}
 					} else {
-						//  we dont have loop by day so we put it on the same day
 						if weekDays != start {
-							current++
-							count--
-							newE := *event
-							newE.SetStart(weekDays)
-							newE.SetEnd(weekDays)
-							newE.SetID(newE.GenerateEventId())
-							newE.SetSequence(current)
-							if until == nil || (until != nil && until.Format(YmdHis) >= weekDays.Format(YmdHis)) {
-								cal.SetEvent(newE)
-							}
-
+							commitEvent()
 						}
 					}
-
 				}
 
 				freqDate = freqDate.AddDate(years, months, days)
@@ -410,247 +225,196 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 					break
 				}
 
-				if until != nil && until.Format(YmdHis) <= freqDate.Format(YmdHis) {
+				if !until.IsZero() && until.Format(YmdHis) <= freqDate.Format(YmdHis) {
 					break
 				}
 			}
-
 		}
-
 	}
-
 }
 
-// parses the event summary
-func (p *Parser) parseEventSummary(eventData string) string {
-	re, _ := regexp.Compile(`SUMMARY:.*?\n`)
-	result := re.FindString(eventData)
-	return trimField(result, "SUMMARY:")
+func parseEventSummary(eventData string) string {
+	return trimField(eventSummaryRegex.FindString(eventData), "SUMMARY:")
 }
 
-// parses the event status
-func (p *Parser) parseEventStatus(eventData string) string {
-	re, _ := regexp.Compile(`STATUS:.*?\n`)
-	result := re.FindString(eventData)
-	return trimField(result, "STATUS:")
+func parseEventStatus(eventData string) string {
+	return trimField(eventStatusRegex.FindString(eventData), "STATUS:")
 }
 
-// parses the event description
-func (p *Parser) parseEventDescription(eventData string) string {
-	re, _ := regexp.Compile(`DESCRIPTION:.*?\n`)
-	result := re.FindString(eventData)
-	return trimField(result, "DESCRIPTION:")
+func parseEventDescription(eventData string) string {
+	return trimField(eventDescRegex.FindString(eventData), "DESCRIPTION:")
 }
 
-// parses the event id provided form google
-func (p *Parser) parseEventId(eventData string) string {
-	re, _ := regexp.Compile(`UID:.*?\n`)
-	result := re.FindString(eventData)
-	return trimField(result, "UID:")
+func parseEventId(eventData string) string {
+	return trimField(eventUIDRegex.FindString(eventData), "UID:")
 }
 
-// parses the event class
-func (p *Parser) parseEventClass(eventData string) string {
-	re, _ := regexp.Compile(`CLASS:.*?\n`)
-	result := re.FindString(eventData)
-	return trimField(result, "CLASS:")
+func parseEventClass(eventData string) string {
+	return trimField(eventClassRegex.FindString(eventData), "CLASS:")
 }
 
-// parses the event sequence
-func (p *Parser) parseEventSequence(eventData string) int {
-	re, _ := regexp.Compile(`SEQUENCE:.*?\n`)
-	result := re.FindString(eventData)
-	sq, _ := strconv.Atoi(trimField(result, "SEQUENCE:"))
-	return sq
+func parseEventSequence(eventData string) int {
+	seq, _ := strconv.Atoi(trimField(eventSequenceRegex.FindString(eventData), "SEQUENCE:"))
+	return seq
 }
 
-// parses the event created time
-func (p *Parser) parseEventCreated(eventData string) time.Time {
-	re, _ := regexp.Compile(`CREATED:.*?\n`)
-	result := re.FindString(eventData)
-	created := trimField(result, "CREATED:")
+func parseEventCreated(eventData string) time.Time {
+	created := trimField(eventCreatedRegex.FindString(eventData), "CREATED:")
 	t, _ := time.Parse(IcsFormat, created)
 	return t
 }
 
-// parses the event modified time
-func (p *Parser) parseEventModified(eventData string) time.Time {
-	re, _ := regexp.Compile(`LAST-MODIFIED:.*?\n`)
-	result := re.FindString(eventData)
-	modified := trimField(result, "LAST-MODIFIED:")
-	t, _ := time.Parse(IcsFormat, modified)
+func parseEventModified(eventData string) time.Time {
+	date := trimField(eventModifiedRegex.FindString(eventData), "LAST-MODIFIED:")
+	t, _ := time.Parse(IcsFormat, date)
 	return t
 }
 
-// parses the event start time
-func (p *Parser) parseEventStart(eventData string) time.Time {
-	reWholeDay, _ := regexp.Compile(`DTSTART;VALUE=DATE:.*?\n`)
-	re, _ := regexp.Compile(`DTSTART(;TZID=.*?){0,1}:.*?\n`)
-	resultWholeDay := reWholeDay.FindString(eventData)
-	var t time.Time
+func parseEventStart(eventData string) time.Time {
+	var (
+		t  time.Time
+		tz string
+	)
 
+	resultWholeDay := eventStartWholeDayRegex.FindString(eventData)
 	if resultWholeDay != "" {
-		// whole day event
-		modified := trimField(resultWholeDay, "DTSTART;VALUE=DATE:")
-		t, _ = time.Parse(IcsFormatWholeDay, modified)
+		tz = trimField(resultWholeDay, "DTSTART;VALUE=DATE:")
+		t, _ = time.Parse(IcsFormatWholeDay, tz)
 	} else {
-		// event that has start hour and minute
-		result := re.FindString(eventData)
-		modified := trimField(result, "DTSTART(;TZID=.*?){0,1}:")
+		result := eventStartRegex.FindString(eventData)
+		tz = trimField(result, "DTSTART(;TZID=.*?){0,1}:")
 
-		if !strings.Contains(modified, "Z") {
-			modified = fmt.Sprintf("%sZ", modified)
+		if !strings.Contains(tz, "Z") {
+			tz = fmt.Sprintf("%sZ", tz)
 		}
 
-		t, _ = time.Parse(IcsFormat, modified)
+		t, _ = time.Parse(IcsFormat, tz)
 	}
 
 	return t
 }
 
-// parses the event end time
-func (p *Parser) parseEventEnd(eventData string) time.Time {
-	reWholeDay, _ := regexp.Compile(`DTEND;VALUE=DATE:.*?\n`)
-	re, _ := regexp.Compile(`DTEND(;TZID=.*?){0,1}:.*?\n`)
-	resultWholeDay := reWholeDay.FindString(eventData)
-	var t time.Time
+func parseEventEnd(eventData string) time.Time {
+	var (
+		t  time.Time
+		tz string
+	)
 
+	resultWholeDay := eventEndWholeDayRegex.FindString(eventData)
 	if resultWholeDay != "" {
-		// whole day event
-		modified := trimField(resultWholeDay, "DTEND;VALUE=DATE:")
-		t, _ = time.Parse(IcsFormatWholeDay, modified)
+		tz = trimField(resultWholeDay, "DTEND;VALUE=DATE:")
+		t, _ = time.Parse(IcsFormatWholeDay, tz)
 	} else {
-		// event that has end hour and minute
-		result := re.FindString(eventData)
-		modified := trimField(result, "DTEND(;TZID=.*?){0,1}:")
+		result := eventEndRegex.FindString(eventData)
+		tz = trimField(result, "DTEND(;TZID=.*?){0,1}:")
 
-		if !strings.Contains(modified, "Z") {
-			modified = fmt.Sprintf("%sZ", modified)
+		if !strings.Contains(tz, "Z") {
+			tz = fmt.Sprintf("%sZ", tz)
 		}
-		t, _ = time.Parse(IcsFormat, modified)
+		t, _ = time.Parse(IcsFormat, tz)
 	}
+
 	return t
-
 }
 
-// parses the event RRULE (the repeater)
-func (p *Parser) parseEventRRule(eventData string) string {
-	re, _ := regexp.Compile(`RRULE:.*?\n`)
-	result := re.FindString(eventData)
-	return trimField(result, "RRULE:")
+func parseEventRRule(eventData string) string {
+	return trimField(eventRRuleRegex.FindString(eventData), "RRULE:")
 }
 
-// parses the event RRULE (the repeater)
-func (p *Parser) parseEventLocation(eventData string) string {
-	re, _ := regexp.Compile(`LOCATION:.*?\n`)
-	result := re.FindString(eventData)
-	return trimField(result, "LOCATION:")
+func parseEventLocation(eventData string) string {
+	return trimField(eventLocationRegex.FindString(eventData), "LOCATION:")
 }
 
-// ======================== ATTENDEE PARSING ===================
+func parseEventAttendees(eventData string) []Attendee {
+	attendeesList := []Attendee{}
+	attendees := attendeesRegex.FindAllString(eventData, -1)
 
-// parses the event attendees
-func (p *Parser) parseEventAttendees(eventData string) []*Attendee {
-	attendeesObj := []*Attendee{}
-	re, _ := regexp.Compile(`ATTENDEE(:|;)(.*?\r?\n)(\s.*?\r?\n)*`)
-	attendees := re.FindAllString(eventData, len(eventData))
-
-	for _, attendeeData := range attendees {
-		if attendeeData == "" {
+	for _, a := range attendees {
+		if a == "" {
 			continue
 		}
-		attendee := p.parseAttendee(strings.Replace(strings.Replace(attendeeData, "\r", "", 1), "\n ", "", 1))
-		//  check for any fields set
-		if attendee.GetEmail() != "" || attendee.GetName() != "" || attendee.GetRole() != "" || attendee.GetStatus() != "" || attendee.GetType() != "" {
-			attendeesObj = append(attendeesObj, attendee)
+		attendee := parseAttendee(strings.Replace(strings.Replace(a, "\r", "", 1), "\n ", "", 1))
+		if attendee.Email != "" || attendee.Name != "" {
+			attendeesList = append(attendeesList, attendee)
 		}
 	}
-	return attendeesObj
+
+	return attendeesList
 }
 
-// parses the event organizer
-func (p *Parser) parseEventOrganizer(eventData string) *Attendee {
-
-	re, _ := regexp.Compile(`ORGANIZER(:|;)(.*?\r?\n)(\s.*?\r?\n)*`)
-	organizerData := re.FindString(eventData)
-	if organizerData == "" {
-		return nil
+func parseEventOrganizer(eventData string) Attendee {
+	organizer := organizerRegex.FindString(eventData)
+	if organizer == "" {
+		return Attendee{}
 	}
-	organizerDataFormated := strings.Replace(strings.Replace(organizerData, "\r", "", 1), "\n ", "", 1)
 
-	a := NewAttendee()
-	a.SetEmail(p.parseAttendeeMail(organizerDataFormated))
-	a.SetName(p.parseOrganizerName(organizerDataFormated))
-
-	return a
-}
-
-//  parse attendee properties
-func (p *Parser) parseAttendee(attendeeData string) *Attendee {
-
-	a := NewAttendee()
-	a.SetEmail(p.parseAttendeeMail(attendeeData))
-	a.SetName(p.parseAttendeeName(attendeeData))
-	a.SetRole(p.parseAttendeeRole(attendeeData))
-	a.SetStatus(p.parseAttendeeStatus(attendeeData))
-	a.SetType(p.parseAttendeeType(attendeeData))
-	return a
-}
-
-// parses the attendee email
-func (p *Parser) parseAttendeeMail(attendeeData string) string {
-	re, _ := regexp.Compile(`mailto:.*?\n`)
-	result := re.FindString(attendeeData)
-	return trimField(result, "mailto:")
-}
-
-// parses the attendee status
-func (p *Parser) parseAttendeeStatus(attendeeData string) string {
-	re, _ := regexp.Compile(`PARTSTAT=.*?;`)
-	result := re.FindString(attendeeData)
-	if result == "" {
-		return ""
+	organizer = strings.Replace(strings.Replace(organizer, "\r", "", 1), "\n ", "", 1)
+	return Attendee{
+		Email: parseAttendeeMail(organizer),
+		Name:  parseOrganizerName(organizer),
 	}
-	return trimField(result, `(PARTSTAT=|;)`)
 }
 
-// parses the attendee role
-func (p *Parser) parseAttendeeRole(attendeeData string) string {
-	re, _ := regexp.Compile(`ROLE=.*?;`)
-	result := re.FindString(attendeeData)
-
-	if result == "" {
-		return ""
+func parseAttendee(data string) Attendee {
+	return Attendee{
+		Email:  parseAttendeeMail(data),
+		Name:   parseAttendeeName(data),
+		Role:   parseAttendeeRole(data),
+		Status: parseAttendeeStatus(data),
+		Type:   parseAttendeeType(data),
 	}
-	return trimField(result, `(ROLE=|;)`)
 }
 
-// parses the attendee Name
-func (p *Parser) parseAttendeeName(attendeeData string) string {
-	re, _ := regexp.Compile(`CN=.*?;`)
-	result := re.FindString(attendeeData)
-	if result == "" {
-		return ""
-	}
-	return trimField(result, `(CN=|;)`)
+func parseAttendeeMail(attendeeData string) string {
+	return trimField(attendeeEmailRegex.FindString(attendeeData), "mailto:")
 }
 
-// parses the organizer Name
-func (p *Parser) parseOrganizerName(orgData string) string {
-	re, _ := regexp.Compile(`CN=.*?:`)
-	result := re.FindString(orgData)
-	if result == "" {
-		return ""
-	}
-	return trimField(result, `(CN=|:)`)
+func parseAttendeeStatus(attendeeData string) string {
+	return trimField(attendeeStatusRegex.FindString(attendeeData), `(PARTSTAT=|;)`)
 }
 
-// parses the attendee type
-func (p *Parser) parseAttendeeType(attendeeData string) string {
-	re, _ := regexp.Compile(`CUTYPE=.*?;`)
-	result := re.FindString(attendeeData)
-	if result == "" {
-		return ""
+func parseAttendeeRole(attendeeData string) string {
+	return trimField(attendeeRoleRegex.FindString(attendeeData), `(ROLE=|;)`)
+}
+
+func parseAttendeeName(attendeeData string) string {
+	return trimField(attendeeNameRegex.FindString(attendeeData), `(CN=|;)`)
+}
+
+func parseOrganizerName(orgData string) string {
+	return trimField(organizerNameRegex.FindString(orgData), `(CN=|:)`)
+}
+
+func parseAttendeeType(attendeeData string) string {
+	return trimField(attendeeTypeRegex.FindString(attendeeData), `(CUTYPE=|;)`)
+}
+
+func parseUntil(rrule string) time.Time {
+	until := trimField(untilRegex.FindString(rrule), `(UNTIL=|;)`)
+	var t time.Time
+	if until == "" {
+	} else {
+		t, _ = time.Parse(IcsFormat, until)
 	}
-	return trimField(result, `(CUTYPE=|;)`)
+	return t
+}
+
+func parseInterval(rrule string) int {
+	interval := trimField(intervalRegex.FindString(rrule), `(INTERVAL=|;)`)
+	i, _ := strconv.Atoi(interval)
+	if i == 0 {
+		i = 1
+	}
+
+	return i
+}
+
+func parseCount(rrule string) int {
+	c := trimField(countRegex.FindString(rrule), `(COUNT=|;)`)
+	count, _ := strconv.Atoi(c)
+	if count == 0 {
+		count = MaxRepeats
+	}
+
+	return count
 }
