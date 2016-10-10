@@ -2,12 +2,11 @@ package ics_test
 
 import (
 	"fmt"
+	"github.com/PuloV/ics-golang"
 	"os"
 	"reflect"
 	"testing"
 	"time"
-
-	"github.com/PuloV/ics-golang"
 )
 
 func TestNewParser(t *testing.T) {
