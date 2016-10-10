@@ -78,13 +78,18 @@ func (c *Calendar) SetEvent(event Event) (*Calendar, error) {
 	// pointer to the added event in the main array
 	eventPtr := &c.events[len(c.events)-1]
 
-	// calculate the start day of the event
+	// calculate the start and end day of the event
 	eventStartTime := event.GetStart()
+	eventEndTime := event.GetEnd()
 	tz := c.GetTimezone()
-	eventDate := time.Date(eventStartTime.Year(), eventStartTime.Month(), eventStartTime.Day(), 0, 0, 0, 0, &tz)
+	eventStartDate := time.Date(eventStartTime.Year(), eventStartTime.Month(), eventStartTime.Day(), 0, 0, 0, 0, &tz)
+	eventEndDate := time.Date(eventEndTime.Year(), eventEndTime.Month(), eventEndTime.Day(), 0, 0, 0, 0, &tz)
 
-	// faster search by date
-	c.eventsByDate[eventDate.Format(YmdHis)] = append(c.eventsByDate[eventDate.Format(YmdHis)], eventPtr)
+	// faster search by date, add each date from start to end date
+	for eventDate := eventStartDate; eventDate.Before(eventEndDate) || eventDate.Equal(eventEndDate); eventDate = eventDate.Add(24 * time.Hour) {
+		c.eventsByDate[eventDate.Format(YmdHis)] = append(c.eventsByDate[eventDate.Format(YmdHis)], eventPtr)
+	}
+
 	// faster search by id
 	c.eventByID[event.GetID()] = eventPtr
 
