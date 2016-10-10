@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	ics "./" //"github.com/PuloV/ics-golang"
+	"github.com/PuloV/ics-golang"
 )
 
 func TestLoadCalendar(t *testing.T) {
