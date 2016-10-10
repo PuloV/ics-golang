@@ -2,12 +2,40 @@ package ics_test
 
 import (
 	"fmt"
-	"github.com/PuloV/ics-golang"
+	"io/ioutil"
 	"os"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/PuloV/ics-golang"
 )
+
+func TestLoadCalendar(t *testing.T) {
+	parser := ics.New()
+	calBytes, err := ioutil.ReadFile("testCalendars/2eventsCal.ics")
+	if err != nil {
+		t.Errorf("Failed to read calendar file ( %s )", err)
+	}
+
+	parser.Load(string(calBytes))
+
+	parseErrors, err := parser.GetErrors()
+	if err != nil {
+		t.Errorf("Failed to wait the parse of the calendars ( %s )", err)
+	}
+	for i, pErr := range parseErrors {
+		t.Errorf("Parsing Error №%d: %s", i, pErr)
+	}
+
+	calendars, errCal := parser.GetCalendars()
+	if errCal != nil {
+		t.Errorf("Failed to get calendars ( %s )", errCal)
+	}
+	if len(calendars) != 1 {
+		t.Errorf("Expected 1 calendar, found %d calendars", len(calendars))
+	}
+}
 
 func TestNewParser(t *testing.T) {
 	parser := ics.New()

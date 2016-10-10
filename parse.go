@@ -103,6 +103,11 @@ func New() *Parser {
 	return p
 }
 
+// Load calender from content
+func (p *Parser) Load(iCalContent string) {
+	p.parseICalContent(iCalContent, "")
+}
+
 //  returns the chan for calendar urls
 func (p *Parser) GetInputChan() chan string {
 	return p.inputChan
