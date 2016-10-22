@@ -71,6 +71,15 @@ func (e *Event) GetImportedID() string {
 	return e.importedId
 }
 
+func (e *Event) SetUrl(url string) *Event {
+	e.url = url
+	return e
+}
+
+func (e *Event) GetUrl() string {
+	return e.url
+}
+
 func (e *Event) SetOrganizer(a *Attendee) *Event {
 	e.organizer = a
 	return e
