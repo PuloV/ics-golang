@@ -20,6 +20,7 @@ type Event struct {
 	rrule         string
 	class         string
 	id            string
+	url           string
 	sequence      int
 	attendees     []*Attendee
 	organizer     *Attendee
