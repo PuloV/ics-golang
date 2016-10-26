@@ -363,45 +363,48 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 			// number of current repeats
 			current := 0
 			// the current date in the main loop
-			freqDate := start
+			freqDateStart := start
+			freqDateEnd := end
 
 			// loops by freq
 			for {
-				weekDays := freqDate
+				weekDaysStart := freqDateStart
+				weekDaysEnd := freqDateEnd
 
 				// check repeating by month
-				if bymonth == "" || strings.Contains(bymonth, weekDays.Format("1")) {
+				if bymonth == "" || strings.Contains(bymonth, weekDaysStart.Format("1")) {
 
 					if byday != "" {
 						// loops the weekdays
 						for i := 0; i < 7; i++ {
-							day := parseDayNameToIcsName(weekDays.Format("Mon"))
-							if strings.Contains(byday, day) && weekDays != start {
+							day := parseDayNameToIcsName(weekDaysStart.Format("Mon"))
+							if strings.Contains(byday, day) && weekDaysStart != start {
 								current++
 								count--
 								newE := *event
-								newE.SetStart(weekDays)
-								newE.SetEnd(weekDays)
+								newE.SetStart(weekDaysStart)
+								newE.SetEnd(weekDaysEnd)
 								newE.SetID(newE.GenerateEventId())
 								newE.SetSequence(current)
-								if until == nil || (until != nil && until.Format(YmdHis) >= weekDays.Format(YmdHis)) {
+								if until == nil || (until != nil && until.Format(YmdHis) >= weekDaysStart.Format(YmdHis)) {
 									cal.SetEvent(newE)
 								}
 
 							}
-							weekDays = weekDays.AddDate(0, 0, 1)
+							weekDaysStart = weekDaysStart.AddDate(0, 0, 1)
+							weekDaysEnd = weekDaysEnd.AddDate(0, 0, 1)
 						}
 					} else {
 						//  we dont have loop by day so we put it on the same day
-						if weekDays != start {
+						if weekDaysStart != start {
 							current++
 							count--
 							newE := *event
-							newE.SetStart(weekDays)
-							newE.SetEnd(weekDays)
+							newE.SetStart(weekDaysStart)
+							newE.SetEnd(weekDaysEnd)
 							newE.SetID(newE.GenerateEventId())
 							newE.SetSequence(current)
-							if until == nil || (until != nil && until.Format(YmdHis) >= weekDays.Format(YmdHis)) {
+							if until == nil || (until != nil && until.Format(YmdHis) >= weekDaysStart.Format(YmdHis)) {
 								cal.SetEvent(newE)
 							}
 
@@ -410,12 +413,13 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 
 				}
 
-				freqDate = freqDate.AddDate(years, months, days)
+				freqDateStart = freqDateStart.AddDate(years, months, days)
+				freqDateEnd = freqDateEnd.AddDate(years, months, days)
 				if current > MaxRepeats || count == 0 {
 					break
 				}
 
-				if until != nil && until.Format(YmdHis) <= freqDate.Format(YmdHis) {
+				if until != nil && until.Format(YmdHis) <= freqDateStart.Format(YmdHis) {
 					break
 				}
 			}
