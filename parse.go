@@ -321,15 +321,15 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 			}
 
 			// freq field
-			reFr, _ := regexp.Compile(`FREQ=.*?;`)
+			reFr, _ := regexp.Compile(`FREQ=[^;]*(;){0,1}`)
 			freq := trimField(reFr.FindString(event.GetRRule()), `(FREQ=|;)`)
 
 			// by month field
-			reBM, _ := regexp.Compile(`BYMONTH=.*?;`)
+			reBM, _ := regexp.Compile(`BYMONTH=[^;]*(;){0,1}`)
 			bymonth := trimField(reBM.FindString(event.GetRRule()), `(BYMONTH=|;)`)
 
 			// by day field
-			reBD, _ := regexp.Compile(`BYDAY=.*?(;|){0,1}\z`)
+			reBD, _ := regexp.Compile(`BYDAY=[^;]*(;){0,1}`)
 			byday := trimField(reBD.FindString(event.GetRRule()), `(BYDAY=|;)`)
 
 			// fmt.Printf("%#v \n", reBD.FindString(event.GetRRule()))
