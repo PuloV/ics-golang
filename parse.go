@@ -446,9 +446,9 @@ func (p *Parser) parseEventStatus(eventData string) string {
 
 // parses the event description
 func (p *Parser) parseEventDescription(eventData string) string {
-	re, _ := regexp.Compile(`DESCRIPTION:.*?\n`)
+	re, _ := regexp.Compile(`DESCRIPTION:.*?\n(?:\s+.*?\n)*`)
 	result := re.FindString(eventData)
-	return trimField(result, "DESCRIPTION:")
+	return trimField(strings.Replace(result, "\r\n ", "", -1), "DESCRIPTION:")
 }
 
 // parses the event id provided form google
