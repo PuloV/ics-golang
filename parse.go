@@ -491,55 +491,59 @@ func (p *Parser) parseEventModified(eventData string) time.Time {
 	return t
 }
 
+func parseDateTime(str string) time.Time {
+	if !strings.Contains(modified, "Z") {
+		modified = fmt.Sprintf("%sZ", modified)
+	}
+
+	t, _ = time.Parse(IcsFormat, modified)
+	return t
+}
+
 // parses the event start time
 func (p *Parser) parseEventStart(eventData string) time.Time {
 	reWholeDay, _ := regexp.Compile(`DTSTART;VALUE=DATE:.*?\n`)
 	re, _ := regexp.Compile(`DTSTART(;TZID=.*?){0,1}:.*?\n`)
-	resultWholeDay := reWholeDay.FindString(eventData)
-	var t time.Time
+	reDateTime, _ := regexp.Compile(`DTSTART;VALUE=DATE-TIME:.*?\n`)
 
-	if resultWholeDay != "" {
+	if resultWholeDay := reWholeDay.FindString(eventData); resultWholeDay != "" {
 		// whole day event
 		modified := trimField(resultWholeDay, "DTSTART;VALUE=DATE:")
-		t, _ = time.Parse(IcsFormatWholeDay, modified)
-	} else {
-		// event that has start hour and minute
-		result := re.FindString(eventData)
-		modified := trimField(result, "DTSTART(;TZID=.*?){0,1}:")
-
-		if !strings.Contains(modified, "Z") {
-			modified = fmt.Sprintf("%sZ", modified)
-		}
-
-		t, _ = time.Parse(IcsFormat, modified)
+		t, _ := time.Parse(IcsFormatWholeDay, modified)
+		return t
 	}
-
-	return t
+	if resultDateTime := reDateTime.FindString(eventData); resultDateTime != "" {
+		// date time event
+		modified := trimField(resultDateTime, "DTSTART;VALUE=DATE-TIME:")
+		return parseDateTime(modified)
+	}
+	// event that has start hour and minute
+	result := re.FindString(eventData)
+	modified := trimField(result, "DTSTART(;TZID=.*?){0,1}:")
+	return parseDateTime(modified)
 }
 
 // parses the event end time
 func (p *Parser) parseEventEnd(eventData string) time.Time {
 	reWholeDay, _ := regexp.Compile(`DTEND;VALUE=DATE:.*?\n`)
 	re, _ := regexp.Compile(`DTEND(;TZID=.*?){0,1}:.*?\n`)
-	resultWholeDay := reWholeDay.FindString(eventData)
-	var t time.Time
+	reDateTime, _ := regexp.Compile(`DTEND;VALUE=DATE-TIME:.*?\n`)
 
-	if resultWholeDay != "" {
+	if resultWholeDay := reWholeDay.FindString(eventData); resultWholeDay != "" {
 		// whole day event
 		modified := trimField(resultWholeDay, "DTEND;VALUE=DATE:")
-		t, _ = time.Parse(IcsFormatWholeDay, modified)
-	} else {
-		// event that has end hour and minute
-		result := re.FindString(eventData)
-		modified := trimField(result, "DTEND(;TZID=.*?){0,1}:")
-
-		if !strings.Contains(modified, "Z") {
-			modified = fmt.Sprintf("%sZ", modified)
-		}
-		t, _ = time.Parse(IcsFormat, modified)
+		t, _ := time.Parse(IcsFormatWholeDay, modified)
+		return t
 	}
-	return t
-
+	if resultDateTime := reDateTime.FindString(eventData); resultDateTime != "" {
+		// date time event
+		modified := trimField(resultDateTime, "DTEND;VALUE=DATE-TIME:")
+		return parseDateTime(modified)
+	}
+	// event that has end hour and minute
+	result := re.FindString(eventData)
+	modified := trimField(result, "DTEND(;TZID=.*?){0,1}:")
+	return parseDateTime(modified)
 }
 
 // parses the event RRULE (the repeater)
