@@ -1,7 +1,9 @@
 #ics-golang
 Golang ics parser
+
 ##Installation
 `go get github.com/PuloV/ics-golang`
+
 ##How to use it
 * Import the package:
 ```sh
