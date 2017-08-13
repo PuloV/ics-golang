@@ -12,10 +12,24 @@ type Calendar struct {
 	url               string
 	version           float64
 	timezone          time.Location
-	events            []Event
+	events            Events
 	eventsByDate      map[string][]*Event
 	eventByID         map[string]*Event
 	eventByImportedID map[string]*Event
+}
+
+type Events []Event
+
+func (events Events) Len() int {
+	return len(events)
+}
+
+func (events Events) Less(i, j int) bool {
+	return events[i].start.Before(events[j].start)
+}
+
+func (events Events) Swap(i, j int) {
+	events[i], events[j] = events[j], events[i]
 }
 
 func NewCalendar() *Calendar {
