@@ -3,6 +3,7 @@ package ics
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"time"
 )
 
@@ -152,6 +153,28 @@ func (c *Calendar) GetEventsByDate(dateTime time.Time) ([]*Event, error) {
 		return events, nil
 	}
 	return nil, errors.New(fmt.Sprintf("There are no events for the day %s", day.Format(YmdHis)))
+}
+
+// GetUpcomingEvents returns the next n-Events.
+func (c *Calendar) GetUpcomingEvents(n int) []Event {
+	upcomingEvents := []Event{}
+
+	// sort events of calendar
+	sort.Sort(c.events)
+
+	now := time.Now()
+	// find next event
+	for _, event := range c.events {
+		if event.GetStart().After(now) {
+			upcomingEvents = append(upcomingEvents, event)
+			// break if we collect enough events
+			if len(upcomingEvents) >= n {
+				break
+			}
+		}
+	}
+
+	return upcomingEvents
 }
 
 func (c *Calendar) String() string {
