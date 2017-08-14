@@ -3,6 +3,7 @@ package ics
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"time"
 )
 
@@ -12,10 +13,24 @@ type Calendar struct {
 	url               string
 	version           float64
 	timezone          time.Location
-	events            []Event
+	events            Events
 	eventsByDate      map[string][]*Event
 	eventByID         map[string]*Event
 	eventByImportedID map[string]*Event
+}
+
+type Events []Event
+
+func (events Events) Len() int {
+	return len(events)
+}
+
+func (events Events) Less(i, j int) bool {
+	return events[i].start.Before(events[j].start)
+}
+
+func (events Events) Swap(i, j int) {
+	events[i], events[j] = events[j], events[i]
 }
 
 func NewCalendar() *Calendar {
@@ -138,6 +153,28 @@ func (c *Calendar) GetEventsByDate(dateTime time.Time) ([]*Event, error) {
 		return events, nil
 	}
 	return nil, errors.New(fmt.Sprintf("There are no events for the day %s", day.Format(YmdHis)))
+}
+
+// GetUpcomingEvents returns the next n-Events.
+func (c *Calendar) GetUpcomingEvents(n int) []Event {
+	upcomingEvents := []Event{}
+
+	// sort events of calendar
+	sort.Sort(c.events)
+
+	now := time.Now()
+	// find next event
+	for _, event := range c.events {
+		if event.GetStart().After(now) {
+			upcomingEvents = append(upcomingEvents, event)
+			// break if we collect enough events
+			if len(upcomingEvents) >= n {
+				break
+			}
+		}
+	}
+
+	return upcomingEvents
 }
 
 func (c *Calendar) String() string {
