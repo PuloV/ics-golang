@@ -26,7 +26,7 @@ func (events Events) Len() int {
 }
 
 func (events Events) Less(i, j int) bool {
-	return events[i].start.Before(events[j].start)
+	return events[i].Start.Before(events[j].Start)
 }
 
 func (events Events) Swap(i, j int) {
@@ -84,8 +84,8 @@ func (c *Calendar) SetEvent(event Event) (*Calendar, error) {
 	mutex.Lock()
 
 	// reference to the calendar
-	if event.GetCalendar() == nil || event.GetCalendar() != c {
-		event.SetCalendar(c)
+	if event.InCalendar == nil || event.InCalendar != c {
+		event.InCalendar = c
 	}
 	// add the event to the main array with events
 	c.events = append(c.events, event)
@@ -94,8 +94,8 @@ func (c *Calendar) SetEvent(event Event) (*Calendar, error) {
 	eventPtr := &c.events[len(c.events)-1]
 
 	// calculate the start and end day of the event
-	eventStartTime := event.GetStart()
-	eventEndTime := event.GetEnd()
+	eventStartTime := event.Start
+	eventEndTime := event.End
 	tz := c.GetTimezone()
 	eventStartDate := time.Date(eventStartTime.Year(), eventStartTime.Month(), eventStartTime.Day(), 0, 0, 0, 0, &tz)
 	eventEndDate := time.Date(eventEndTime.Year(), eventEndTime.Month(), eventEndTime.Day(), 0, 0, 0, 0, &tz)
@@ -106,10 +106,10 @@ func (c *Calendar) SetEvent(event Event) (*Calendar, error) {
 	}
 
 	// faster search by id
-	c.eventByID[event.GetID()] = eventPtr
+	c.eventByID[event.ID] = eventPtr
 
-	if event.GetImportedID() != "" {
-		c.eventByImportedID[event.GetImportedID()] = eventPtr
+	if event.ImportedID != "" {
+		c.eventByImportedID[event.ImportedID] = eventPtr
 	}
 
 	mutex.Unlock()
@@ -165,7 +165,7 @@ func (c *Calendar) GetUpcomingEvents(n int) []Event {
 	now := time.Now()
 	// find next event
 	for _, event := range c.events {
-		if event.GetStart().After(now) {
+		if event.Start.After(now) {
 			upcomingEvents = append(upcomingEvents, event)
 			// break if we collect enough events
 			if len(upcomingEvents) >= n {
