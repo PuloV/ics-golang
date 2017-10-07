@@ -7,25 +7,25 @@ import (
 )
 
 type Event struct {
-	Start         time.Time
-	End           time.Time
-	Created       time.Time
-	Modified      time.Time
-	AlarmTime     time.Duration
-	ImportedID    string
-	Status        string
-	Description   string
-	Location      string
-	Summary       string
-	RRule         string
-	Class         string
-	ID            string
-	Sequence      int
-	Attendees     []*Attendee
-	Organizer     *Attendee
-	WholeDayEvent bool
-	InCalendar    *Calendar
-	AlarmCallback func(*Event)
+	Start         time.Time     `json:"start"`
+	End           time.Time     `json:"end"`
+	Created       time.Time     `json:"created"`
+	Modified      time.Time     `json:"modified"`
+	AlarmTime     time.Duration `json:"alarmTime"`
+	ImportedID    string        `json:"importedID"`
+	Status        string        `json:"status"`
+	Description   string        `json:"description"`
+	Location      string        `json:"location"`
+	Summary       string        `json:"summary"`
+	RRule         string        `json:"rrule"`
+	Class         string        `json:"class"`
+	ID            string        `json:"id"`
+	Sequence      int           `json:"sequence"`
+	WholeDayEvent bool          `json:"wholeDayEvent"`
+	Attendees     []*Attendee   `json:"-"`
+	Organizer     *Attendee     `json:"-"`
+	InCalendar    *Calendar     `json:"-"`
+	AlarmCallback func(*Event)  `json:"-"`
 }
 
 func NewEvent() *Event {
