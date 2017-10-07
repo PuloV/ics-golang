@@ -268,32 +268,32 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 		// whole day event when both times are 00:00:00
 		wholeDay := start.Hour() == 0 && end.Hour() == 0 && start.Minute() == 0 && end.Minute() == 0 && start.Second() == 0 && end.Second() == 0
 
-		event.SetStatus(p.parseEventStatus(eventData))
-		event.SetSummary(p.parseEventSummary(eventData))
-		event.SetDescription(p.parseEventDescription(eventData))
-		event.SetImportedID(p.parseEventId(eventData))
-		event.SetClass(p.parseEventClass(eventData))
-		event.SetSequence(p.parseEventSequence(eventData))
-		event.SetCreated(p.parseEventCreated(eventData))
-		event.SetLastModified(p.parseEventModified(eventData))
-		event.SetRRule(p.parseEventRRule(eventData))
-		event.SetLocation(p.parseEventLocation(eventData))
-		event.SetStart(start)
-		event.SetEnd(end)
-		event.SetWholeDayEvent(wholeDay)
-		event.SetAttendees(p.parseEventAttendees(eventData))
-		event.SetOrganizer(p.parseEventOrganizer(eventData))
-		event.SetCalendar(cal)
-		event.SetID(event.GenerateEventId())
+		event.Status = p.parseEventStatus(eventData)
+		event.Summary = p.parseEventSummary(eventData)
+		event.Description = p.parseEventDescription(eventData)
+		event.ImportedID = p.parseEventId(eventData)
+		event.Class = p.parseEventClass(eventData)
+		event.Sequence = p.parseEventSequence(eventData)
+		event.Created = p.parseEventCreated(eventData)
+		event.Modified = p.parseEventModified(eventData)
+		event.RRule = p.parseEventRRule(eventData)
+		event.Location = p.parseEventLocation(eventData)
+		event.Start = start
+		event.End = end
+		event.WholeDayEvent = wholeDay
+		event.Attendees = p.parseEventAttendees(eventData)
+		event.Organizer = p.parseEventOrganizer(eventData)
+		event.InCalendar = cal
+		event.ID = event.GenerateEventId()
 
 		cal.SetEvent(*event)
 		p.bufferedChan <- event
 
-		if RepeatRuleApply && event.GetRRule() != "" {
+		if RepeatRuleApply && event.RRule != "" {
 
 			// until field
 			reUntil, _ := regexp.Compile(`UNTIL=(\d)*T(\d)*Z(;){0,1}`)
-			untilString := trimField(reUntil.FindString(event.GetRRule()), `(UNTIL=|;)`)
+			untilString := trimField(reUntil.FindString(event.RRule), `(UNTIL=|;)`)
 			//  set until date
 			var until *time.Time
 			if untilString == "" {
@@ -305,7 +305,7 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 
 			// INTERVAL field
 			reInterval, _ := regexp.Compile(`INTERVAL=(\d)*(;){0,1}`)
-			intervalString := trimField(reInterval.FindString(event.GetRRule()), `(INTERVAL=|;)`)
+			intervalString := trimField(reInterval.FindString(event.RRule), `(INTERVAL=|;)`)
 			interval, _ := strconv.Atoi(intervalString)
 
 			if interval == 0 {
@@ -314,7 +314,7 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 
 			// count field
 			reCount, _ := regexp.Compile(`COUNT=(\d)*(;){0,1}`)
-			countString := trimField(reCount.FindString(event.GetRRule()), `(COUNT=|;)`)
+			countString := trimField(reCount.FindString(event.RRule), `(COUNT=|;)`)
 			count, _ := strconv.Atoi(countString)
 			if count == 0 {
 				count = MaxRepeats
@@ -322,15 +322,15 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 
 			// freq field
 			reFr, _ := regexp.Compile(`FREQ=[^;]*(;){0,1}`)
-			freq := trimField(reFr.FindString(event.GetRRule()), `(FREQ=|;)`)
+			freq := trimField(reFr.FindString(event.RRule), `(FREQ=|;)`)
 
 			// by month field
 			reBM, _ := regexp.Compile(`BYMONTH=[^;]*(;){0,1}`)
-			bymonth := trimField(reBM.FindString(event.GetRRule()), `(BYMONTH=|;)`)
+			bymonth := trimField(reBM.FindString(event.RRule), `(BYMONTH=|;)`)
 
 			// by day field
 			reBD, _ := regexp.Compile(`BYDAY=[^;]*(;){0,1}`)
-			byday := trimField(reBD.FindString(event.GetRRule()), `(BYDAY=|;)`)
+			byday := trimField(reBD.FindString(event.RRule), `(BYDAY=|;)`)
 
 			// fmt.Printf("%#v \n", reBD.FindString(event.GetRRule()))
 			// fmt.Println("untilString", reUntil.FindString(event.GetRRule()))
@@ -382,10 +382,10 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 								current++
 								count--
 								newE := *event
-								newE.SetStart(weekDaysStart)
-								newE.SetEnd(weekDaysEnd)
-								newE.SetID(newE.GenerateEventId())
-								newE.SetSequence(current)
+								newE.Start = weekDaysStart
+								newE.End = weekDaysEnd
+								newE.ID = newE.GenerateEventId()
+								newE.Sequence = current
 								if until == nil || (until != nil && until.Format(YmdHis) >= weekDaysStart.Format(YmdHis)) {
 									cal.SetEvent(newE)
 								}
@@ -400,10 +400,10 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 							current++
 							count--
 							newE := *event
-							newE.SetStart(weekDaysStart)
-							newE.SetEnd(weekDaysEnd)
-							newE.SetID(newE.GenerateEventId())
-							newE.SetSequence(current)
+							newE.Start = weekDaysStart
+							newE.End = weekDaysEnd
+							newE.ID = newE.GenerateEventId()
+							newE.Sequence = current
 							if until == nil || (until != nil && until.Format(YmdHis) >= weekDaysStart.Format(YmdHis)) {
 								cal.SetEvent(newE)
 							}

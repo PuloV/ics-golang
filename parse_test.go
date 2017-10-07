@@ -343,53 +343,53 @@ func TestCalendarEvents(t *testing.T) {
 	org.SetName("r.chupetlovska@gmail.com")
 	org.SetEmail("r.chupetlovska@gmail.com")
 
-	if event.GetStart() != start {
-		t.Errorf("Expected start %s, found %s", start, event.GetStart())
+	if event.Start != start {
+		t.Errorf("Expected start %s, found %s", start, event.Start)
 	}
 
-	if event.GetEnd() != end {
-		t.Errorf("Expected end %s, found %s", end, event.GetEnd())
+	if event.End != end {
+		t.Errorf("Expected end %s, found %s", end, event.End)
 	}
 
-	if event.GetCreated() != created {
-		t.Errorf("Expected created %s, found %s", created, event.GetCreated())
+	if event.Created != created {
+		t.Errorf("Expected created %s, found %s", created, event.Created)
 	}
 
-	if event.GetLastModified() != modified {
-		t.Errorf("Expected modified %s, found %s", modified, event.GetLastModified())
+	if event.Modified != modified {
+		t.Errorf("Expected modified %s, found %s", modified, event.Modified)
 	}
 
-	if event.GetLocation() != location {
-		t.Errorf("Expected location %s, found %s", location, event.GetLocation())
+	if event.Location != location {
+		t.Errorf("Expected location %s, found %s", location, event.Location)
 	}
 
-	if event.GetDescription() != desc {
-		t.Errorf("Expected description %s, found %s", desc, event.GetDescription())
+	if event.Description != desc {
+		t.Errorf("Expected description %s, found %s", desc, event.Description)
 	}
 
-	if event.GetSequence() != seq {
-		t.Errorf("Expected sequence %s, found %s", seq, event.GetSequence())
+	if event.Sequence != seq {
+		t.Errorf("Expected sequence %s, found %s", seq, event.Sequence)
 	}
 
-	if event.GetStatus() != status {
-		t.Errorf("Expected status %s, found %s", status, event.GetStatus())
+	if event.Status != status {
+		t.Errorf("Expected status %s, found %s", status, event.Status)
 	}
 
-	if event.GetSummary() != summary {
-		t.Errorf("Expected status %s, found %s", summary, event.GetSummary())
+	if event.Summary != summary {
+		t.Errorf("Expected status %s, found %s", summary, event.Summary)
 	}
 
-	if event.GetRRule() != rrule {
-		t.Errorf("Expected rrule %s, found %s", rrule, event.GetRRule())
+	if event.RRule != rrule {
+		t.Errorf("Expected rrule %s, found %s", rrule, event.RRule)
 	}
 
-	if len(event.GetAttendees()) != attendeesCount {
-		t.Errorf("Expected attendeesCount %s, found %s", attendeesCount, len(event.GetAttendees()))
+	if len(event.Attendees) != attendeesCount {
+		t.Errorf("Expected attendeesCount %s, found %s", attendeesCount, len(event.Attendees))
 	}
 
-	eventOrg := event.GetOrganizer()
+	eventOrg := event.Organizer
 	if *eventOrg != *org {
-		t.Errorf("Expected organizer %s, found %s", org, event.GetOrganizer())
+		t.Errorf("Expected organizer %s, found %s", org, event.Organizer)
 	}
 
 	// SECOND EVENT WITHOUT ATTENDEES AND ORGANIZER
@@ -401,12 +401,12 @@ func TestCalendarEvents(t *testing.T) {
 		t.Errorf("Failed to get event by id with error %s", errNoAttendees)
 	}
 
-	if len(eventNoAttendees.GetAttendees()) != attendeesCount {
-		t.Errorf("Expected attendeesCount %s, found %s", attendeesCount, len(event.GetAttendees()))
+	if len(eventNoAttendees.Attendees) != attendeesCount {
+		t.Errorf("Expected attendeesCount %s, found %s", attendeesCount, len(event.Attendees))
 	}
 
-	if eventNoAttendees.GetOrganizer() != nil {
-		t.Errorf("Expected organizer %s, found %s", org, eventNoAttendees.GetOrganizer())
+	if eventNoAttendees.Organizer != nil {
+		t.Errorf("Expected organizer %s, found %s", org, eventNoAttendees.Organizer)
 	}
 }
 
@@ -441,7 +441,7 @@ func TestCalendarEventAttendees(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to get event by id with error %s", err)
 	}
-	attendees := event.GetAttendees()
+	attendees := event.Attendees
 	attendeesCount := 3
 
 	if len(attendees) != attendeesCount {
