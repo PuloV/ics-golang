@@ -278,6 +278,7 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 		event.SetLastModified(p.parseEventModified(eventData))
 		event.SetRRule(p.parseEventRRule(eventData))
 		event.SetLocation(p.parseEventLocation(eventData))
+		event.SetGeo(p.parseEventGeo(eventData))
 		event.SetStart(start)
 		event.SetEnd(end)
 		event.SetWholeDayEvent(wholeDay)
@@ -554,6 +555,13 @@ func (p *Parser) parseEventLocation(eventData string) string {
 	re, _ := regexp.Compile(`LOCATION:.*?\n`)
 	result := re.FindString(eventData)
 	return trimField(result, "LOCATION:")
+}
+
+// parses the event RRULE (the repeater)
+func (p *Parser) parseEventGeo(eventData string) string {
+	re, _ := regexp.Compile(`GEO:.*?\n`)
+	result := re.FindString(eventData)
+	return trimField(result, "GEO:")
 }
 
 // ======================== ATTENDEE PARSING ===================
