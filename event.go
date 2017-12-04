@@ -16,7 +16,7 @@ type Event struct {
 	status        string
 	description   string
 	location      string
-	geo           string
+	geo           *Geo
 	summary       string
 	rrule         string
 	class         string
@@ -231,12 +231,12 @@ func (e *Event) GetLocation() string {
 	return e.location
 }
 
-func (e *Event) SetGeo(geo string) *Event {
+func (e *Event) SetGeo(geo *Geo) *Event {
 	e.geo = geo
 	return e
 }
 
-func (e *Event) GetGeo() string {
+func (e *Event) GetGeo() *Geo {
 	return e.geo
 }
 

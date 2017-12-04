@@ -330,7 +330,7 @@ func TestCalendarEvents(t *testing.T) {
 	created, _ := time.Parse(IcsFormat, "20140515T075711Z")
 	modified, _ := time.Parse(IcsFormat, "20141125T074253Z")
 	location := "In The Office"
-	geo := "39.620511;-75.852557"
+	geo := NewGeo("39.620511", "-75.852557")
 	desc := "1. Report on previous weekly tasks. \\n2. Plan of the present weekly tasks."
 	seq := 1
 	status := "CONFIRMED"
@@ -360,6 +360,14 @@ func TestCalendarEvents(t *testing.T) {
 
 	if event.GetLocation() != location {
 		t.Errorf("Expected location %s, found %s", location, event.GetLocation())
+	}
+
+	if event.GetGeo().latStr != geo.latStr {
+		t.Errorf("Expected geo %s, found %s", geo.latStr, event.GetGeo().latStr)
+	}
+
+	if event.GetGeo().longStr != geo.longStr {
+		t.Errorf("Expected geo %s, found %s", geo.longStr, event.GetGeo().longStr)
 	}
 
 	if event.GetDescription() != desc {
