@@ -241,8 +241,8 @@ func (e *Event) GetGeo() *Geo {
 }
 
 func (e *Event) String() string {
-	from := e.GetStart().Format(YmdHis)
-	to := e.GetEnd().Format(YmdHis)
+	from := e.GetStart().Format(ymdHis)
+	to := e.GetEnd().Format(ymdHis)
 	summ := e.GetSummary()
 	status := e.GetStatus()
 	attendeeCount := len(e.GetAttendees())

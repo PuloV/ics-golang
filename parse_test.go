@@ -3,7 +3,6 @@ package ics
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -43,23 +42,6 @@ func TestNewParser(t *testing.T) {
 	}
 }
 
-func TestNewParserChans(t *testing.T) {
-	parser := New()
-	input := parser.GetInputChan()
-	output := parser.GetOutputChan()
-
-	rType := fmt.Sprintf("%v", reflect.TypeOf(input))
-
-	if rType != "chan string" {
-		t.Errorf("Failed to create a input chan! Received: Type %s Value %v", rType, input)
-	}
-
-	rType = fmt.Sprintf("%v", reflect.TypeOf(output))
-	if rType != "chan *ics.Event" {
-		t.Errorf("Failed to create a output chan! Received: Type %s Value %v", rType, output)
-	}
-}
-
 func TestParsing0Calendars(t *testing.T) {
 	parser := New()
 	parser.Wait()
@@ -76,8 +58,7 @@ func TestParsing0Calendars(t *testing.T) {
 
 func TestParsing1Calendars(t *testing.T) {
 	parser := New()
-	input := parser.GetInputChan()
-	input <- "testCalendars/2eventsCal.ics"
+	parser.LoadAsyncFromUrl("testCalendars/2eventsCal.ics")
 	parser.Wait()
 
 	parseErrors, err := parser.GetErrors()
@@ -103,9 +84,8 @@ func TestParsing1Calendars(t *testing.T) {
 
 func TestParsing2Calendars(t *testing.T) {
 	parser := New()
-	input := parser.GetInputChan()
-	input <- "testCalendars/2eventsCal.ics"
-	input <- "testCalendars/3eventsNoAttendee.ics"
+	parser.LoadAsyncFromUrl("testCalendars/2eventsCal.ics")
+	parser.LoadAsyncFromUrl("testCalendars/3eventsNoAttendee.ics")
 	parser.Wait()
 
 	parseErrors, err := parser.GetErrors()
@@ -124,15 +104,14 @@ func TestParsing2Calendars(t *testing.T) {
 	}
 
 	if len(calendars) != 2 {
-		t.Errorf("Expected 1 calendar, found %d calendars", len(calendars))
+		t.Errorf("Expected 2 calendars, found %d calendars", len(calendars))
 	}
 
 }
 
 func TestParsingNotExistingCalendar(t *testing.T) {
 	parser := New()
-	input := parser.GetInputChan()
-	input <- "testCalendars/notFound.ics"
+	parser.LoadAsyncFromUrl("testCalendars/notFound.ics")
 	parser.Wait()
 
 	parseErrors, err := parser.GetErrors()
@@ -148,9 +127,8 @@ func TestParsingNotExistingCalendar(t *testing.T) {
 
 func TestParsingNotExistingAndExistingCalendars(t *testing.T) {
 	parser := New()
-	input := parser.GetInputChan()
-	input <- "testCalendars/3eventsNoAttendee.ics"
-	input <- "testCalendars/notFound.ics"
+	parser.LoadAsyncFromUrl("testCalendars/3eventsNoAttendee.ics")
+	parser.LoadAsyncFromUrl("testCalendars/notFound.ics")
 	parser.Wait()
 
 	parseErrors, err := parser.GetErrors()
@@ -175,8 +153,7 @@ func TestParsingNotExistingAndExistingCalendars(t *testing.T) {
 }
 func TestParsingWrongCalendarUrls(t *testing.T) {
 	parser := New()
-	input := parser.GetInputChan()
-	input <- "http://localhost/goTestFails"
+	parser.LoadAsyncFromUrl("http://localhost/goTestFails")
 	parser.Wait()
 
 	parseErrors, err := parser.GetErrors()
@@ -199,26 +176,9 @@ func TestParsingWrongCalendarUrls(t *testing.T) {
 	}
 }
 
-func TestCreatingTempDir(t *testing.T) {
-	FilePath = "testingTempDir/"
-	parser := New()
-	input := parser.GetInputChan()
-	input <- "https://www.google.com/calendar/ical/yordanpulov%40gmail.com/private-81525ac0eb14cdc2e858c15e1b296a1c/basic.ics"
-	parser.Wait()
-	_, err := os.Stat(FilePath)
-	if err != nil {
-		t.Errorf("Failed to create %s", FilePath)
-	}
-	// remove the new dir
-	os.Remove(FilePath)
-	// return the var to default
-	FilePath = "tmp/"
-}
-
 func TestCalendarInfo(t *testing.T) {
 	parser := New()
-	input := parser.GetInputChan()
-	input <- "testCalendars/2eventsCal.ics"
+	parser.LoadAsyncFromUrl("testCalendars/2eventsCal.ics")
 	parser.Wait()
 
 	parseErrors, err := parser.GetErrors()
@@ -265,12 +225,12 @@ func TestCalendarInfo(t *testing.T) {
 		t.Errorf("Expected %d events by date in calendar, got %d events", 2, len(eventsByDates))
 	}
 
-	geometryExamIcsFormat, errICS := time.Parse(IcsFormat, "20140616T060000Z")
+	geometryExamIcsFormat, errICS := time.Parse(icsFormat, "20140616T060000Z")
 	if err != nil {
 		t.Errorf("(ics time format) Unexpected error %s", errICS)
 	}
 
-	geometryExamYmdHis, errYMD := time.Parse(YmdHis, "2014-06-16 06:00:00")
+	geometryExamYmdHis, errYMD := time.Parse(ymdHis, "2014-06-16 06:00:00")
 	if err != nil {
 		t.Errorf("(YmdHis time format) Unexpected error %s", errYMD)
 	}
@@ -294,8 +254,7 @@ func TestCalendarInfo(t *testing.T) {
 
 func TestCalendarEvents(t *testing.T) {
 	parser := New()
-	input := parser.GetInputChan()
-	input <- "testCalendars/2eventsCal.ics"
+	parser.LoadAsyncFromUrl("testCalendars/2eventsCal.ics")
 	parser.Wait()
 
 	parseErrors, err := parser.GetErrors()
@@ -325,10 +284,10 @@ func TestCalendarEvents(t *testing.T) {
 	}
 
 	//  event must have
-	start, _ := time.Parse(IcsFormat, "20140714T100000Z")
-	end, _ := time.Parse(IcsFormat, "20140714T110000Z")
-	created, _ := time.Parse(IcsFormat, "20140515T075711Z")
-	modified, _ := time.Parse(IcsFormat, "20141125T074253Z")
+	start, _ := time.Parse(icsFormat, "20140714T100000Z")
+	end, _ := time.Parse(icsFormat, "20140714T110000Z")
+	created, _ := time.Parse(icsFormat, "20140515T075711Z")
+	modified, _ := time.Parse(icsFormat, "20141125T074253Z")
 	location := "In The Office"
 	geo := NewGeo("39.620511", "-75.852557")
 	desc := "1. Report on previous weekly tasks. \\n2. Plan of the present weekly tasks."
@@ -419,8 +378,7 @@ func TestCalendarEvents(t *testing.T) {
 
 func TestCalendarEventAttendees(t *testing.T) {
 	parser := New()
-	input := parser.GetInputChan()
-	input <- "testCalendars/2eventsCal.ics"
+	parser.LoadAsyncFromUrl("testCalendars/2eventsCal.ics")
 	parser.Wait()
 
 	parseErrors, err := parser.GetErrors()
@@ -507,8 +465,7 @@ func TestCalendarEventAttendees(t *testing.T) {
 
 func TestCalendarMultidayEvent(t *testing.T) {
 	parser := New()
-	input := parser.GetInputChan()
-	input <- "testCalendars/multiday.ics"
+	parser.LoadAsyncFromUrl("testCalendars/multiday.ics")
 	parser.Wait()
 
 	parseErrors, err := parser.GetErrors()

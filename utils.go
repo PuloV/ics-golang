@@ -2,44 +2,31 @@ package ics
 
 import (
 	"fmt"
-	// "io/ioutil"
 	"strings"
-	// "errors"
 	"io"
 	"net/http"
 	"os"
 	"regexp"
-	"sync"
 	"time"
 )
 
-var o sync.Once
-var mutex *sync.Mutex
-var idCounter int
 
-// if DeleteTempFiles is true , after we download ics and parse it , the local temp file  will be deleted
-var DeleteTempFiles bool
+const (
+	// temporary path for downloading calendars
+	filePath = "tmp/"
 
-// Describes the file path to the folder with the temp ics files
-var FilePath string
+	//  unixtimestamp
+	uts = "1136239445"
 
-// if RepeatRuleApply is true , the rrule will create new objects for the repeated events
-var RepeatRuleApply bool
+	//ics date time format
+	icsFormat = "20060102T150405Z"
 
-// max of the rrule repeat for single event
-var MaxRepeats int
+	// ics date format
+	icsFormatWholeDay = "20060102"
 
-//  unixtimestamp
-const uts = "1136239445"
-
-//ics date time format
-const IcsFormat = "20060102T150405Z"
-
-// Y-m-d H:i:S time format
-const YmdHis = "2006-01-02 15:04:05"
-
-// ics date format ( describes a whole day)
-const IcsFormatWholeDay = "20060102"
+	// Y-m-d H:i:S time format
+	ymdHis = "2006-01-02 15:04:05"
+)
 
 // downloads the calendar before parsing it
 func downloadFromUrl(url string) (string, error) {
@@ -47,10 +34,10 @@ func downloadFromUrl(url string) (string, error) {
 	tokens := strings.Split(url, "/")
 
 	// create the name of the file
-	fileName := fmt.Sprintf("%s%s_%s", FilePath, time.Now().Format(uts), tokens[len(tokens)-1])
+	fileName := fmt.Sprintf("%s%s_%s", filePath, time.Now().Format(uts), tokens[len(tokens)-1])
 
 	// creates the path
-	os.MkdirAll(FilePath, 0777)
+	os.MkdirAll(filePath, 0777)
 
 	// creates the file in the path folder
 	output, err := os.Create(fileName)
@@ -72,6 +59,10 @@ func downloadFromUrl(url string) (string, error) {
 	// close the response body
 	defer response.Body.Close()
 
+	if response.StatusCode != 200 {
+
+		return "", fmt.Errorf("url returned status code: %v", response.StatusCode)
+	}
 	// copy the response from the url to the temp local file
 	_, err = io.Copy(output, response.Body)
 

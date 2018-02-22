@@ -12,95 +12,61 @@ import (
 	"time"
 )
 
-func init() {
-	mutex = new(sync.Mutex)
-	DeleteTempFiles = true
-	FilePath = "tmp/"
-	RepeatRuleApply = false
-	MaxRepeats = 10
-}
+var (
+	repeatRuleApply = false
+	maxRepeats = 10
+)
 
 type Parser struct {
-	inputChan       chan string
-	outputChan      chan *Event
-	bufferedChan    chan *Event
 	errorsOccured   []error
 	parsedCalendars []*Calendar
 	parsedEvents    []*Event
 	statusCalendars int
-	wg              *sync.WaitGroup
+	wg              sync.WaitGroup
+	mutex			sync.Mutex
 }
 
 // creates new parser
 func New() *Parser {
 	p := new(Parser)
-	p.inputChan = make(chan string)
-	p.outputChan = make(chan *Event)
-	p.bufferedChan = make(chan *Event)
 	p.errorsOccured = []error{}
-	p.wg = new(sync.WaitGroup)
 	p.parsedCalendars = []*Calendar{}
 	p.parsedEvents = []*Event{}
 
-	// buffers the events output chan
-	go func() {
-		for {
-			if len(p.parsedEvents) > 0 {
-				select {
-				case p.outputChan <- p.parsedEvents[0]:
-					p.parsedEvents = p.parsedEvents[1:]
-				case event := <-p.bufferedChan:
-					p.parsedEvents = append(p.parsedEvents, event)
-				}
-			} else {
-				event := <-p.bufferedChan
-				p.parsedEvents = append(p.parsedEvents, event)
-			}
-		}
-	}()
-
-	go func(input chan string) {
-		// endless loop for getting the ics urls
-		for {
-			link := <-input
-
-			// mark calendar in the wait group as not parsed
-			p.wg.Add(1)
-
-			// marks that we have statusCalendars +1 calendars to be parsed
-			mutex.Lock()
-			p.statusCalendars++
-			mutex.Unlock()
-
-			go func(link string) {
-				// mark calendar in the wait group as  parsed
-				defer p.wg.Done()
-
-				iCalContent, err := p.getICal(link)
-				if err != nil {
-					p.errorsOccured = append(p.errorsOccured, err)
-
-					mutex.Lock()
-					// marks that we have parsed 1 calendar and we have statusCalendars -1 left to be parsed
-					p.statusCalendars--
-					mutex.Unlock()
-					return
-				}
-
-				// parse the ICal calendar
-				p.parseICalContent(iCalContent, link)
-
-				mutex.Lock()
-				// marks that we have parsed 1 calendar and we have statusCalendars -1 left to be parsed
-				p.statusCalendars--
-				mutex.Unlock()
-
-			}(link)
-		}
-	}(p.inputChan)
-	// p.wg.Wait()
-	// return p.inputChan
 	return p
+}
+
+func (p *Parser) atomicStatusCalendars(value int) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+	p.statusCalendars += value
+}
+
+func (p *Parser) atomicAddError(err error) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+	p.errorsOccured = append(p.errorsOccured, err)
+}
+
+func (p *Parser) LoadAsyncFromUrl(link string) {
+	// mark calendar in the wait group as not parsed
+	p.wg.Add(1)
+	go func() {
+		// mark calendar in the wait group as  parsed
+		defer p.wg.Done()
+		// marks that we have statusCalendars +1 calendars to be parsed
+		p.atomicStatusCalendars(1)
+		defer p.atomicStatusCalendars(-1)
+
+		iCalContent, err := p.getICal(link)
+		if err != nil {
+			p.atomicAddError(err)
+			return
+		}
+
+		// parse the ICal calendar
+		p.parseICalContent(iCalContent, link)
+	}()
 }
 
 // Load calender from content
@@ -108,21 +74,13 @@ func (p *Parser) Load(iCalContent string) {
 	p.parseICalContent(iCalContent, "")
 }
 
-//  returns the chan for calendar urls
-func (p *Parser) GetInputChan() chan string {
-	return p.inputChan
-}
-
-// returns the chan where will be received events
-func (p *Parser) GetOutputChan() chan *Event {
-	return p.outputChan
-}
-
 // returns the chan where will be received events
 func (p *Parser) GetCalendars() ([]*Calendar, error) {
 	if !p.Done() {
 		return nil, errors.New("Calendars not parsed")
 	}
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
 	return p.parsedCalendars, nil
 }
 
@@ -131,11 +89,15 @@ func (p *Parser) GetErrors() ([]error, error) {
 	if !p.Done() {
 		return nil, errors.New("Calendars not parsed")
 	}
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
 	return p.errorsOccured, nil
 }
 
 // is everything is parsed
 func (p *Parser) Done() bool {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
 	return p.statusCalendars == 0
 }
 
@@ -177,7 +139,7 @@ func (p *Parser) getICal(url string) (string, error) {
 		return "", errReadFile
 	}
 
-	if DeleteTempFiles && re.FindString(url) != "" {
+	if re.FindString(url) != "" {
 		os.Remove(fileName)
 	}
 
@@ -189,11 +151,9 @@ func (p *Parser) getICal(url string) (string, error) {
 // parses the iCal formated string to a calendar object
 func (p *Parser) parseICalContent(iCalContent, url string) {
 	ical := NewCalendar()
-	p.parsedCalendars = append(p.parsedCalendars, ical)
 
 	// split the data into calendar info and events data
 	eventsData, calInfo := explodeICal(iCalContent)
-	idCounter++
 
 	// fill the calendar fields
 	ical.SetName(p.parseICalName(calInfo))
@@ -205,6 +165,9 @@ func (p *Parser) parseICalContent(iCalContent, url string) {
 	// parse the events and add them to ical
 	p.parseEvents(ical, eventsData)
 
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+	p.parsedCalendars = append(p.parsedCalendars, ical)
 }
 
 // explodes the ICal content to array of events and calendar info
@@ -288,9 +251,8 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 		event.SetID(event.GenerateEventId())
 
 		cal.SetEvent(*event)
-		p.bufferedChan <- event
 
-		if RepeatRuleApply && event.GetRRule() != "" {
+		if repeatRuleApply && event.GetRRule() != "" {
 
 			// until field
 			reUntil, _ := regexp.Compile(`UNTIL=(\d)*T(\d)*Z(;){0,1}`)
@@ -300,7 +262,7 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 			if untilString == "" {
 				until = nil
 			} else {
-				untilV, _ := time.Parse(IcsFormat, untilString)
+				untilV, _ := time.Parse(icsFormat, untilString)
 				until = &untilV
 			}
 
@@ -318,7 +280,7 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 			countString := trimField(reCount.FindString(event.GetRRule()), `(COUNT=|;)`)
 			count, _ := strconv.Atoi(countString)
 			if count == 0 {
-				count = MaxRepeats
+				count = maxRepeats
 			}
 
 			// freq field
@@ -387,7 +349,7 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 								newE.SetEnd(weekDaysEnd)
 								newE.SetID(newE.GenerateEventId())
 								newE.SetSequence(current)
-								if until == nil || (until != nil && until.Format(YmdHis) >= weekDaysStart.Format(YmdHis)) {
+								if until == nil || (until != nil && until.Format(ymdHis) >= weekDaysStart.Format(ymdHis)) {
 									cal.SetEvent(newE)
 								}
 
@@ -405,7 +367,7 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 							newE.SetEnd(weekDaysEnd)
 							newE.SetID(newE.GenerateEventId())
 							newE.SetSequence(current)
-							if until == nil || (until != nil && until.Format(YmdHis) >= weekDaysStart.Format(YmdHis)) {
+							if until == nil || (until != nil && until.Format(ymdHis) >= weekDaysStart.Format(ymdHis)) {
 								cal.SetEvent(newE)
 							}
 
@@ -416,11 +378,11 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 
 				freqDateStart = freqDateStart.AddDate(years, months, days)
 				freqDateEnd = freqDateEnd.AddDate(years, months, days)
-				if current > MaxRepeats || count == 0 {
+				if current > maxRepeats || count == 0 {
 					break
 				}
 
-				if until != nil && until.Format(YmdHis) <= freqDateStart.Format(YmdHis) {
+				if until != nil && until.Format(ymdHis) <= freqDateStart.Format(ymdHis) {
 					break
 				}
 			}
@@ -477,7 +439,7 @@ func (p *Parser) parseEventCreated(eventData string) time.Time {
 	re, _ := regexp.Compile(`CREATED:.*?\n`)
 	result := re.FindString(eventData)
 	created := trimField(result, "CREATED:")
-	t, _ := time.Parse(IcsFormat, created)
+	t, _ := time.Parse(icsFormat, created)
 	return t
 }
 
@@ -486,7 +448,7 @@ func (p *Parser) parseEventModified(eventData string) time.Time {
 	re, _ := regexp.Compile(`LAST-MODIFIED:.*?\n`)
 	result := re.FindString(eventData)
 	modified := trimField(result, "LAST-MODIFIED:")
-	t, _ := time.Parse(IcsFormat, modified)
+	t, _ := time.Parse(icsFormat, modified)
 	return t
 }
 
@@ -500,7 +462,7 @@ func (p *Parser) parseEventStart(eventData string) time.Time {
 	if resultWholeDay != "" {
 		// whole day event
 		modified := trimField(resultWholeDay, "DTSTART;VALUE=DATE:")
-		t, _ = time.Parse(IcsFormatWholeDay, modified)
+		t, _ = time.Parse(icsFormatWholeDay, modified)
 	} else {
 		// event that has start hour and minute
 		result := re.FindString(eventData)
@@ -510,7 +472,7 @@ func (p *Parser) parseEventStart(eventData string) time.Time {
 			modified = fmt.Sprintf("%sZ", modified)
 		}
 
-		t, _ = time.Parse(IcsFormat, modified)
+		t, _ = time.Parse(icsFormat, modified)
 	}
 
 	return t
@@ -526,7 +488,7 @@ func (p *Parser) parseEventEnd(eventData string) time.Time {
 	if resultWholeDay != "" {
 		// whole day event
 		modified := trimField(resultWholeDay, "DTEND;VALUE=DATE:")
-		t, _ = time.Parse(IcsFormatWholeDay, modified)
+		t, _ = time.Parse(icsFormatWholeDay, modified)
 	} else {
 		// event that has end hour and minute
 		result := re.FindString(eventData)
@@ -535,7 +497,7 @@ func (p *Parser) parseEventEnd(eventData string) time.Time {
 		if !strings.Contains(modified, "Z") {
 			modified = fmt.Sprintf("%sZ", modified)
 		}
-		t, _ = time.Parse(IcsFormat, modified)
+		t, _ = time.Parse(icsFormat, modified)
 	}
 	return t
 

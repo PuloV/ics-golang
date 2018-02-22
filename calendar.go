@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"sync"
 	"time"
 )
 
@@ -17,6 +18,7 @@ type Calendar struct {
 	eventsByDate      map[string][]*Event
 	eventByID         map[string]*Event
 	eventByImportedID map[string]*Event
+	mutex             sync.Mutex
 }
 
 type Events []Event
@@ -81,7 +83,8 @@ func (c *Calendar) GetTimezone() time.Location {
 //  add event to the calendar
 func (c *Calendar) SetEvent(event Event) (*Calendar, error) {
 	//  lock so that the events array doesn't change its size from other goruote
-	mutex.Lock()
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 
 	// reference to the calendar
 	if event.GetCalendar() == nil || event.GetCalendar() != c {
@@ -102,7 +105,7 @@ func (c *Calendar) SetEvent(event Event) (*Calendar, error) {
 
 	// faster search by date, add each date from start to end date
 	for eventDate := eventStartDate; eventDate.Before(eventEndDate) || eventDate.Equal(eventEndDate); eventDate = eventDate.Add(24 * time.Hour) {
-		c.eventsByDate[eventDate.Format(YmdHis)] = append(c.eventsByDate[eventDate.Format(YmdHis)], eventPtr)
+		c.eventsByDate[eventDate.Format(ymdHis)] = append(c.eventsByDate[eventDate.Format(ymdHis)], eventPtr)
 	}
 
 	// faster search by id
@@ -112,7 +115,6 @@ func (c *Calendar) SetEvent(event Event) (*Calendar, error) {
 		c.eventByImportedID[event.GetImportedID()] = eventPtr
 	}
 
-	mutex.Unlock()
 	return c, nil
 }
 
@@ -148,11 +150,11 @@ func (c *Calendar) GetEventsByDates() map[string][]*Event {
 func (c *Calendar) GetEventsByDate(dateTime time.Time) ([]*Event, error) {
 	tz := c.GetTimezone()
 	day := time.Date(dateTime.Year(), dateTime.Month(), dateTime.Day(), 0, 0, 0, 0, &tz)
-	events, ok := c.eventsByDate[day.Format(YmdHis)]
+	events, ok := c.eventsByDate[day.Format(ymdHis)]
 	if ok {
 		return events, nil
 	}
-	return nil, errors.New(fmt.Sprintf("There are no events for the day %s", day.Format(YmdHis)))
+	return nil, errors.New(fmt.Sprintf("There are no events for the day %s", day.Format(ymdHis)))
 }
 
 // GetUpcomingEvents returns the next n-Events.
