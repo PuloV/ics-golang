@@ -51,12 +51,12 @@ func TestNewParserChans(t *testing.T) {
 	rType := fmt.Sprintf("%v", reflect.TypeOf(input))
 
 	if rType != "chan string" {
-		t.Errorf("Failed to create a input chan! Received: Type %s Value %s", rType, input)
+		t.Errorf("Failed to create a input chan! Received: Type %s Value %v", rType, input)
 	}
 
 	rType = fmt.Sprintf("%v", reflect.TypeOf(output))
 	if rType != "chan *ics.Event" {
-		t.Errorf("Failed to create a output chan! Received: Type %s Value %s", rType, output)
+		t.Errorf("Failed to create a output chan! Received: Type %s Value %v", rType, output)
 	}
 }
 
@@ -375,7 +375,7 @@ func TestCalendarEvents(t *testing.T) {
 	}
 
 	if event.GetSequence() != seq {
-		t.Errorf("Expected sequence %s, found %s", seq, event.GetSequence())
+		t.Errorf("Expected sequence %d, found %d", seq, event.GetSequence())
 	}
 
 	if event.GetStatus() != status {
@@ -391,7 +391,7 @@ func TestCalendarEvents(t *testing.T) {
 	}
 
 	if len(event.GetAttendees()) != attendeesCount {
-		t.Errorf("Expected attendeesCount %s, found %s", attendeesCount, len(event.GetAttendees()))
+		t.Errorf("Expected attendeesCount %d, found %d", attendeesCount, len(event.GetAttendees()))
 	}
 
 	eventOrg := event.GetOrganizer()
@@ -409,7 +409,7 @@ func TestCalendarEvents(t *testing.T) {
 	}
 
 	if len(eventNoAttendees.GetAttendees()) != attendeesCount {
-		t.Errorf("Expected attendeesCount %s, found %s", attendeesCount, len(event.GetAttendees()))
+		t.Errorf("Expected attendeesCount %d, found %d", attendeesCount, len(event.GetAttendees()))
 	}
 
 	if eventNoAttendees.GetOrganizer() != nil {
@@ -452,7 +452,7 @@ func TestCalendarEventAttendees(t *testing.T) {
 	attendeesCount := 3
 
 	if len(attendees) != attendeesCount {
-		t.Errorf("Expected attendeesCount %s, found %s", attendeesCount, len(attendees))
+		t.Errorf("Expected attendeesCount %d, found %d", attendeesCount, len(attendees))
 		return
 	}
 
