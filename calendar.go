@@ -13,7 +13,7 @@ type Calendar struct {
 	description       string
 	url               string
 	version           float64
-	timezone          time.Location
+	timezone          *time.Location
 	events            Events
 	eventsByDate      map[string][]*Event
 	eventByID         map[string]*Event
@@ -71,12 +71,12 @@ func (c *Calendar) GetVersion() float64 {
 	return c.version
 }
 
-func (c *Calendar) SetTimezone(tz time.Location) *Calendar {
+func (c *Calendar) SetTimezone(tz *time.Location) *Calendar {
 	c.timezone = tz
 	return c
 }
 
-func (c *Calendar) GetTimezone() time.Location {
+func (c *Calendar) GetTimezone() *time.Location {
 	return c.timezone
 }
 
@@ -100,8 +100,15 @@ func (c *Calendar) SetEvent(event Event) (*Calendar, error) {
 	eventStartTime := event.GetStart()
 	eventEndTime := event.GetEnd()
 	tz := c.GetTimezone()
-	eventStartDate := time.Date(eventStartTime.Year(), eventStartTime.Month(), eventStartTime.Day(), 0, 0, 0, 0, &tz)
-	eventEndDate := time.Date(eventEndTime.Year(), eventEndTime.Month(), eventEndTime.Day(), 0, 0, 0, 0, &tz)
+	if eventStartTime.Location() != nil {
+		tz = eventStartTime.Location()
+	}
+	eventStartDate := time.Date(eventStartTime.Year(), eventStartTime.Month(), eventStartTime.Day(), 0, 0, 0, 0, tz)
+	tz = c.GetTimezone()
+	if eventEndTime.Location() != nil {
+		tz = eventStartTime.Location()
+	}
+	eventEndDate := time.Date(eventEndTime.Year(), eventEndTime.Month(), eventEndTime.Day(), 0, 0, 0, 0, tz)
 
 	// faster search by date, add each date from start to end date
 	for eventDate := eventStartDate; eventDate.Before(eventEndDate) || eventDate.Equal(eventEndDate); eventDate = eventDate.Add(24 * time.Hour) {
@@ -149,7 +156,7 @@ func (c *Calendar) GetEventsByDates() map[string][]*Event {
 // get all events for specified date
 func (c *Calendar) GetEventsByDate(dateTime time.Time) ([]*Event, error) {
 	tz := c.GetTimezone()
-	day := time.Date(dateTime.Year(), dateTime.Month(), dateTime.Day(), 0, 0, 0, 0, &tz)
+	day := time.Date(dateTime.Year(), dateTime.Month(), dateTime.Day(), 0, 0, 0, 0, tz)
 	events, ok := c.eventsByDate[day.Format(ymdHis)]
 	if ok {
 		return events, nil

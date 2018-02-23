@@ -2,14 +2,12 @@ package ics
 
 import (
 	"fmt"
-	"strings"
 	"io"
 	"net/http"
 	"os"
-	"regexp"
+	"strings"
 	"time"
 )
-
 
 const (
 	// temporary path for downloading calendars
@@ -75,51 +73,8 @@ func downloadFromUrl(url string) (string, error) {
 	return fileName, nil
 }
 
-func stringToByte(str string) []byte {
-	return []byte(str)
-}
-
-// removes newlines and cutset from given string
-func trimField(field, cutset string) string {
-	re, _ := regexp.Compile(cutset)
-	cutsetRem := re.ReplaceAllString(field, "")
-	return strings.TrimRight(cutsetRem, "\r\n")
-}
-
 //  checks if file exists
 func fileExists(fileName string) bool {
 	_, err := os.Stat(fileName)
 	return err == nil
-}
-
-func parseDayNameToIcsName(day string) string {
-	var dow string
-	switch day {
-	case "Mon":
-		dow = "MO"
-		break
-	case "Tue":
-		dow = "TU"
-		break
-	case "Wed":
-		dow = "WE"
-		break
-	case "Thu":
-		dow = "TH"
-		break
-	case "Fri":
-		dow = "FR"
-		break
-	case "Sat":
-		dow = "ST"
-		break
-	case "Sun":
-		dow = "SU"
-		break
-	default:
-		// fmt.Println("DEFAULT :", start.Format("Mon"))
-		dow = ""
-		break
-	}
-	return dow
 }

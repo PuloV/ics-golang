@@ -205,10 +205,10 @@ func (e *Event) IsWholeDay() bool {
 func (e *Event) GenerateEventId() string {
 	if e.GetImportedID() != "" {
 		toBeHashed := fmt.Sprintf("%s%s%s", e.GetStart(), e.GetEnd(), e.GetImportedID())
-		return fmt.Sprintf("%x", md5.Sum(stringToByte(toBeHashed)))
+		return fmt.Sprintf("%x", md5.Sum([]byte(toBeHashed)))
 	} else {
 		toBeHashed := fmt.Sprintf("%s%s%s%s", e.GetStart(), e.GetEnd(), e.GetSummary(), e.GetDescription())
-		return fmt.Sprintf("%x", md5.Sum(stringToByte(toBeHashed)))
+		return fmt.Sprintf("%x", md5.Sum([]byte(toBeHashed)))
 	}
 
 }
