@@ -204,11 +204,11 @@ func (e *Event) IsWholeDay() bool {
 //  generates an unique id for the event
 func (e *Event) GenerateEventId() string {
 	if e.GetImportedID() != "" {
-		toBeHashed := fmt.Sprintf("%s%s%s%s", e.GetStart(), e.GetEnd(), e.GetImportedID())
-		return fmt.Sprintf("%x", md5.Sum(stringToByte(toBeHashed)))
+		toBeHashed := fmt.Sprintf("%s%s%s", e.GetStart(), e.GetEnd(), e.GetImportedID())
+		return fmt.Sprintf("%x", md5.Sum([]byte(toBeHashed)))
 	} else {
 		toBeHashed := fmt.Sprintf("%s%s%s%s", e.GetStart(), e.GetEnd(), e.GetSummary(), e.GetDescription())
-		return fmt.Sprintf("%x", md5.Sum(stringToByte(toBeHashed)))
+		return fmt.Sprintf("%x", md5.Sum([]byte(toBeHashed)))
 	}
 
 }
@@ -241,8 +241,8 @@ func (e *Event) GetGeo() *Geo {
 }
 
 func (e *Event) String() string {
-	from := e.GetStart().Format(YmdHis)
-	to := e.GetEnd().Format(YmdHis)
+	from := e.GetStart().Format(ymdHis)
+	to := e.GetEnd().Format(ymdHis)
 	summ := e.GetSummary()
 	status := e.GetStatus()
 	attendeeCount := len(e.GetAttendees())

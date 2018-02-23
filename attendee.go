@@ -63,6 +63,5 @@ func (a *Attendee) GetType() string {
 }
 
 func (a *Attendee) String() string {
-
 	return fmt.Sprintf("%s with email %s", a.name, a.email)
 }

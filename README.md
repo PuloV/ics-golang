@@ -1,46 +1,30 @@
 # ics-golang
-Golang ics parser
+Golang ics parser, taken from github.com/PuloV/ics-golang
+Changes made to improve parsing plus fixes of race conditions
 
 ## Installation
-`go get github.com/PuloV/ics-golang`
+`go get github.com/slockij/ics-golang`
 
 ## How to use it
-* Import the package:
+* Import the package
+* Create a new parser
+* Pass as many ics urls as you want asynchronously (don't rely that the calendars will be parsed in this order)
+* Waitfor parsing to complete
+
 ```sh
 import (
-	"github.com/PuloV/ics-golang"
+	"github.com/slockij/ics-golang"
 )
-```
-* Create a new parser:
-```sh
+
+func main() {
     parser := ics.New()
-```
-* Pass as many ics urls as you want to the input chan :
-```sh
-    parserChan := parser.GetInputChan()
-    parserChan <- "http://www.google.com/calendar/ical/bg.bulgarian%23holiday%40group.v.calendar.google.com/public/basic.ics"
-    parserChan <- "http://www.google.com/calendar/ical/en.bulgarian%23holiday%40group.v.calendar.google.com/public/basic.ics"
-    parserChan <- "http://www.google.com/calendar/ical/de.bulgarian%23holiday%40group.v.calendar.google.com/public/basic.ics"
-```
-###### * don't rely that the calendars will be parsed in this order
-* Wait for the result of the parsing :
-```sh
-
-    outputChan := parser.GetOutputChan()
-    //  print events
-	go func() {
-		for event := range outputChan {
-			fmt.Println(event.GetImportedID())
-		}
-	}()
-
-	// wait to kill the main goroute
+    parser.LoadAsyncFromUrl("http://www.google.com/calendar/ical/bg.bulgarian%23holiday%40group.v.calendar.google.com/public/basic.ics")
+    parser.LoadAsyncFromUrl("http://www.google.com/calendar/ical/en.bulgarian%23holiday%40group.v.calendar.google.com/public/basic.ics")
+    parser.LoadAsyncFromUrl("http://www.google.com/calendar/ical/de.bulgarian%23holiday%40group.v.calendar.google.com/public/basic.ics")
+	// wait to for parsing to be done
 	parser.Wait()
+}
 ```
-###### * the data form the calendars may be mixed
-
-## Different usage
-You can see diferent usage in the [ics-golang-examples](https://github.com/PuloV/ics-golang-examples) or in the test files `<filename>_test.go`
 
 ## LICENCE
 The MIT License (MIT)
