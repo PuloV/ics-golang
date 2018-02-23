@@ -561,3 +561,61 @@ func TestCalendarMultidayEvent(t *testing.T) {
 		t.Errorf("Expected no event after the end day, got %d", len(events))
 	}
 }
+
+func TestCalendarMultidayEventWithDurationInsteadOfEndDate(t *testing.T) {
+	parser := New()
+	input := parser.GetInputChan()
+	input <- "testCalendars/multiday_duration.ics"
+	parser.Wait()
+
+	parseErrors, err := parser.GetErrors()
+	if err != nil {
+		t.Errorf("Failed to wait the parse of the calendars ( %s )", err)
+	}
+	if len(parseErrors) != 0 {
+		t.Errorf("Expected 0 error, found %d in :\n  %#v", len(parseErrors), parseErrors)
+	}
+
+	calendars, errCal := parser.GetCalendars()
+	if errCal != nil {
+		t.Errorf("Failed to get calendars ( %s )", errCal)
+	}
+
+	if len(calendars) != 1 {
+		t.Errorf("Expected 1 calendar, found %d calendars", len(calendars))
+		return
+	}
+
+	calendar := calendars[0]
+
+	// Test a day before the start day
+	events, err := calendar.GetEventsByDate(time.Date(2016, 8, 31, 0, 0, 0, 0, time.UTC))
+	if err == nil {
+		t.Errorf("Expected no event before the start day, got %d", len(events))
+	}
+
+	// Test exact start day
+	events, err = calendar.GetEventsByDate(time.Date(2016, 9, 1, 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Errorf("Failed to get event: %s", err.Error())
+	}
+	if len(events) != 1 {
+		t.Errorf("Expected 1 event on the start day, got %d", len(events))
+	}
+
+	// Test a random day between start and end date
+	events, err = calendar.GetEventsByDate(time.Date(2016, 9, 2, 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Errorf("Failed to get event: %s", err.Error())
+	}
+	if len(events) != 1 {
+		t.Errorf("Expected 1 event between start and end, got %d", len(events))
+	}
+
+	// Test a day after the end day
+	events, err = calendar.GetEventsByDate(time.Date(2016, 9, 4, 0, 0, 0, 0, time.UTC))
+
+	if err == nil {
+		t.Errorf("Expected no event after the end day, got %d", len(events))
+	}
+}
