@@ -274,10 +274,11 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 
 		cal.SetEvent(*event)
 
-		if repeatRuleApply && event.GetRRule() != "" {
+		rrule := event.GetRRule()
+		if repeatRuleApply && rrule != "" {
 
 			// until field
-			untilString := p.extractData(re.until, event.GetRRule())
+			untilString := p.extractData(re.until, rrule)
 			//  set until date
 			var until *time.Time
 			if untilString == "" {
@@ -288,7 +289,7 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 			}
 
 			// INTERVAL field
-			intervalString := p.extractData(re.interval, event.GetRRule())
+			intervalString := p.extractData(re.interval, rrule)
 			interval, _ := strconv.Atoi(intervalString)
 
 			if interval == 0 {
@@ -296,20 +297,20 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 			}
 
 			// count field
-			countString := p.extractData(re.count, event.GetRRule())
+			countString := p.extractData(re.count, rrule)
 			count, _ := strconv.Atoi(countString)
 			if count == 0 {
 				count = maxRepeats
 			}
 
 			// freq field
-			freq := p.extractData(re.freq, event.GetRRule())
+			freq := p.extractData(re.freq, rrule)
 
 			// by month field
-			bymonth := p.extractData(re.byMonth, event.GetRRule())
+			bymonth := p.extractData(re.byMonth, rrule)
 
 			// by day field
-			byday := p.extractData(re.byDay, event.GetRRule())
+			byday := p.extractData(re.byDay, rrule)
 
 			//  set the freq modification of the dates
 			var years, days, months int
