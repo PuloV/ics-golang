@@ -267,7 +267,8 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 		end := p.parseEventEnd(eventData)
 		// whole day event when both times are 00:00:00
 		wholeDay := start.Hour() == 0 && end.Hour() == 0 && start.Minute() == 0 && end.Minute() == 0 && start.Second() == 0 && end.Second() == 0
-
+		
+		event.SetDTStamp(p.parseEventDTStamp(eventData))
 		event.SetStatus(p.parseEventStatus(eventData))
 		event.SetSummary(p.parseEventSummary(eventData))
 		event.SetDescription(p.parseEventDescription(eventData))
@@ -284,6 +285,7 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 		event.SetWholeDayEvent(wholeDay)
 		event.SetAttendees(p.parseEventAttendees(eventData))
 		event.SetOrganizer(p.parseEventOrganizer(eventData))
+		event.SetDTZID(p.parseDTZID(eventData))
 		event.SetCalendar(cal)
 		event.SetID(event.GenerateEventId())
 
@@ -490,6 +492,15 @@ func (p *Parser) parseEventModified(eventData string) time.Time {
 	return t
 }
 
+// parses the event DTStamp time (very similar to last-modified, but not the same)
+func (p *Parser) parseEventDTStamp(eventData string) time.Time {
+	re, _ := regexp.Compile(`DTSTAMP;?.*?:.*?\n`)  // This will accept parameters
+	result := re.FindString(eventData)
+	modified := trimField(result, "DTSTAMP.*?:")  // This will discard all parameters
+	t, _ := time.Parse(IcsFormat, modified)
+	return t
+}
+
 // parses the event start time
 func (p *Parser) parseEventStart(eventData string) time.Time {
 	reWholeDay, _ := regexp.Compile(`DTSTART;VALUE=DATE:.*?\n`)
@@ -540,6 +551,14 @@ func (p *Parser) parseEventEnd(eventData string) time.Time {
 	return t
 
 }
+
+// parses all the TZID found
+func (p *Parser) parseDTZID(eventData string) []string {
+	re, _ := regexp.Compile(`TZID=(.*?)(;|:)`)
+	match := re.FindAllString( eventData, -1)
+	return match
+}
+	
 
 // parses the event RRULE (the repeater)
 func (p *Parser) parseEventRRule(eventData string) string {
