@@ -431,9 +431,9 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 
 // parses the event summary
 func (p *Parser) parseEventSummary(eventData string) string {
-	re, _ := regexp.Compile(`SUMMARY:.*?\n`)
+	re, _ := regexp.Compile(`SUMMARY:.*?\n(?:\s+.*?\n)*`)
 	result := re.FindString(eventData)
-	return trimField(result, "SUMMARY:")
+	return trimField(strings.Replace(result, "\r\n ", "", -1), "SUMMARY:")
 }
 
 // parses the event status
