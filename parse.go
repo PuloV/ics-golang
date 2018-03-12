@@ -159,7 +159,7 @@ func (p *Parser) getICal(url string) (string, error) {
 			return "", errDownload
 		}
 
-	} else { //  use a file from local storage
+	} else if url != "-" { //  use a file from local storage
 
 		//  check if file exists
 		if fileExists(url) {
@@ -171,7 +171,14 @@ func (p *Parser) getICal(url string) (string, error) {
 	}
 
 	//  read the file with the ical data
-	fileContent, errReadFile := ioutil.ReadFile(fileName)
+	var fileContent []byte
+	var errReadFile error
+	
+	if url == "-" {
+		fileContent, errReadFile = ioutil.ReadAll( os.Stdin)
+	} else {
+		fileContent, errReadFile = ioutil.ReadFile(fileName)
+	}
 
 	if errReadFile != nil {
 		return "", errReadFile
