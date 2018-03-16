@@ -31,6 +31,9 @@ type Parser struct {
 	wg              *sync.WaitGroup
 }
 
+var	trimcont = strings.NewReplacer( "\r\n ", "", "\n ", "")
+
+
 // creates new parser
 func New() *Parser {
 	p := new(Parser)
@@ -442,7 +445,7 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 func (p *Parser) parseEventSummary(eventData string) string {
 	re, _ := regexp.Compile(`SUMMARY(?:;.*?|):.*?\n(?:\s+.*?\n)*`)  // This will accept parameters and additional lines
 	result := re.FindString(eventData)
-	return trimField(strings.Replace(result, "\r\n ", "", -1), "SUMMARY.*?:")  // This concatenates additional lines and discards all parameters
+	return trimField(trimcont.Replace(result), "SUMMARY.*?:")  // This concatenates additional lines and discards all parameters
 }
 
 // parses the event status
@@ -456,7 +459,7 @@ func (p *Parser) parseEventStatus(eventData string) string {
 func (p *Parser) parseEventDescription(eventData string) string {
 	re, _ := regexp.Compile(`DESCRIPTION(?:;.*?|):.*?\n(?:\s+.*?\n)*`)  // This will accept parameters and additional lines
 	result := re.FindString(eventData)
-	return trimField(strings.Replace(result, "\r\n ", "", -1), "DESCRIPTION.*?:")  // This concatenates additional lines and discards all parameters
+	return trimField(trimcont.Replace(result), "DESCRIPTION.*?:")  // This concatenates additional lines and discards all parameters
 }
 
 // parses the event id provided form google
@@ -578,7 +581,7 @@ func (p *Parser) parseEventRRule(eventData string) string {
 func (p *Parser) parseEventLocation(eventData string) string {
 	re, _ := regexp.Compile(`LOCATION(?:;.*?|):.*?\n(?:\s+.*?\n)*`) // This will accept parameters and additional lines
 	result := re.FindString(eventData)
-	return trimField(strings.Replace(result, "\r\n ", "", -1), "LOCATION.*?:") // This concatenates additional lines and discards all parameters
+	return trimField(trimcont.Replace(result), "LOCATION.*?:") // This concatenates additional lines and discards all parameters
 }
 
 // parses the event GEO
