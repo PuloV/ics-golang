@@ -202,9 +202,9 @@ func (p *Parser) getICal(url string) (string, error) {
 func (p *Parser) parseICalContent(iCalContent, url string) {
 	ical := NewCalendar()
 	p.parsedCalMutex.Lock()
-	p.parsedCalendars = append(p.parsedCalendars, ical)  //NEEDS MUTEX
-	p.idCounter++
-	p.parsedCalMutex.Unlock()
+	p.parsedCalendars = append(p.parsedCalendars, ical)  //Needs Mutex to protect append and increment
+	p.idCounter++              
+	p.parsedCalMutex.Unlock()  // Subsequent filling of ical is to unshared objects.
 
 	// split the data into calendar info and events data
 	eventsData, calInfo := explodeICal(iCalContent)
