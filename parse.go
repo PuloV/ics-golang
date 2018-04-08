@@ -21,6 +21,7 @@ func init() {
 }
 
 type Parser struct {
+	parsedCalMutex  sync.Mutex
 	inputChan       chan string
 	outputChan      chan *Event
 	bufferedChan    chan *Event
@@ -28,8 +29,12 @@ type Parser struct {
 	parsedCalendars []*Calendar
 	parsedEvents    []*Event
 	statusCalendars int
+	idCounter       int
 	wg              *sync.WaitGroup
 }
+
+var	trimcont = strings.NewReplacer( "\r\n ", "", "\n ", "")
+
 
 // creates new parser
 func New() *Parser {
@@ -159,7 +164,7 @@ func (p *Parser) getICal(url string) (string, error) {
 			return "", errDownload
 		}
 
-	} else { //  use a file from local storage
+	} else if url != "-" { //  use a file from local storage
 
 		//  check if file exists
 		if fileExists(url) {
@@ -171,7 +176,14 @@ func (p *Parser) getICal(url string) (string, error) {
 	}
 
 	//  read the file with the ical data
-	fileContent, errReadFile := ioutil.ReadFile(fileName)
+	var fileContent []byte
+	var errReadFile error
+	
+	if url == "-" {
+		fileContent, errReadFile = ioutil.ReadAll( os.Stdin)
+	} else {
+		fileContent, errReadFile = ioutil.ReadFile(fileName)
+	}
 
 	if errReadFile != nil {
 		return "", errReadFile
@@ -189,11 +201,13 @@ func (p *Parser) getICal(url string) (string, error) {
 // parses the iCal formated string to a calendar object
 func (p *Parser) parseICalContent(iCalContent, url string) {
 	ical := NewCalendar()
-	p.parsedCalendars = append(p.parsedCalendars, ical)
+	p.parsedCalMutex.Lock()
+	p.parsedCalendars = append(p.parsedCalendars, ical)  //NEEDS MUTEX
+	p.idCounter++
+	p.parsedCalMutex.Unlock()
 
 	// split the data into calendar info and events data
 	eventsData, calInfo := explodeICal(iCalContent)
-	idCounter++
 
 	// fill the calendar fields
 	ical.SetName(p.parseICalName(calInfo))
@@ -435,7 +449,7 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 func (p *Parser) parseEventSummary(eventData string) string {
 	re, _ := regexp.Compile(`SUMMARY(?:;.*?|):.*?\n(?:\s+.*?\n)*`)  // This will accept parameters and additional lines
 	result := re.FindString(eventData)
-	return trimField(strings.Replace(result, "\r\n ", "", -1), "SUMMARY.*?:")  // This concatenates additional lines and discards all parameters
+	return trimField(trimcont.Replace(result), "SUMMARY.*?:")  // This concatenates additional lines and discards all parameters
 }
 
 // parses the event status
@@ -449,7 +463,7 @@ func (p *Parser) parseEventStatus(eventData string) string {
 func (p *Parser) parseEventDescription(eventData string) string {
 	re, _ := regexp.Compile(`DESCRIPTION(?:;.*?|):.*?\n(?:\s+.*?\n)*`)  // This will accept parameters and additional lines
 	result := re.FindString(eventData)
-	return trimField(strings.Replace(result, "\r\n ", "", -1), "DESCRIPTION.*?:")  // This concatenates additional lines and discards all parameters
+	return trimField(trimcont.Replace(result), "DESCRIPTION.*?:")  // This concatenates additional lines and discards all parameters
 }
 
 // parses the event id provided form google
@@ -571,7 +585,7 @@ func (p *Parser) parseEventRRule(eventData string) string {
 func (p *Parser) parseEventLocation(eventData string) string {
 	re, _ := regexp.Compile(`LOCATION(?:;.*?|):.*?\n(?:\s+.*?\n)*`) // This will accept parameters and additional lines
 	result := re.FindString(eventData)
-	return trimField(strings.Replace(result, "\r\n ", "", -1), "LOCATION.*?:") // This concatenates additional lines and discards all parameters
+	return trimField(trimcont.Replace(result), "LOCATION.*?:") // This concatenates additional lines and discards all parameters
 }
 
 // parses the event GEO
