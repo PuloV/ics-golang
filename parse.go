@@ -46,11 +46,13 @@ func New() *Parser {
 	go func(input chan string) {
 		// endless loop for getting the ics urls
 		for {
-			link := <-input
+			link, more := <-input
+			if !more {
+				break
+			}
+			// fmt.Printf("Next %s\n", link)
 
 			// mark calendar in the wait group as not parsed
-			p.wg.Add(1)
-
 			// marks that we have statusCalendars +1 calendars to be parsed
 			mutex.Lock()
 			p.statusCalendars++
@@ -62,10 +64,9 @@ func New() *Parser {
 
 				iCalContent, err := p.getICal(link)
 				if err != nil {
-					p.errorsOccured = append(p.errorsOccured, err)
-
 					mutex.Lock()
 					// marks that we have parsed 1 calendar and we have statusCalendars -1 left to be parsed
+					p.errorsOccured = append(p.errorsOccured, err)
 					p.statusCalendars--
 					mutex.Unlock()
 					return
@@ -118,6 +119,12 @@ func (p *Parser) GetErrors() ([]error, error) {
 	return p.errorsOccured, nil
 }
 
+// another file is queued to be parsed
+func (p *Parser) Add() {
+	p.wg.Add(1)
+	return
+}
+
 // is everything is parsed
 func (p *Parser) Done() bool {
 	return p.statusCalendars == 0
@@ -163,6 +170,7 @@ func (p *Parser) getICal(url string) (string, error) {
 	} else {
 		fileContent, errReadFile = ioutil.ReadFile(fileName)
 	}
+	// fmt.Printf("Read %s\n", fileName)
 
 	if errReadFile != nil {
 		return "", errReadFile
