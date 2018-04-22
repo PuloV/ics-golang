@@ -120,7 +120,7 @@ func parseDayNameToIcsName(day string) string {
 		dow = "FR"
 		break
 	case "Sat":
-		dow = "ST"
+		dow = "SA"
 		break
 	case "Sun":
 		dow = "SU"
