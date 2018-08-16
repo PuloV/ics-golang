@@ -493,7 +493,7 @@ func (p *Parser) parseEventModified(eventData string) time.Time {
 // parses the event start time
 func (p *Parser) parseEventStart(eventData string) time.Time {
 	reWholeDay, _ := regexp.Compile(`DTSTART;VALUE=DATE:.*?\n`)
-	re, _ := regexp.Compile(`DTSTART(;TZID=.*?){0,1}:.*?\n`)
+	re, _ := regexp.Compile(`DTSTART(;TZID=.*?){0,1}(;VALUE=DATE-TIME){0,1}:.*?\n`)
 	resultWholeDay := reWholeDay.FindString(eventData)
 	var t time.Time
 
@@ -504,7 +504,7 @@ func (p *Parser) parseEventStart(eventData string) time.Time {
 	} else {
 		// event that has start hour and minute
 		result := re.FindString(eventData)
-		modified := trimField(result, "DTSTART(;TZID=.*?){0,1}:")
+		modified := trimField(result, "DTSTART(;TZID=.*?){0,1}(;VALUE=DATE-TIME){0,1}:")
 
 		if !strings.Contains(modified, "Z") {
 			modified = fmt.Sprintf("%sZ", modified)
@@ -519,7 +519,7 @@ func (p *Parser) parseEventStart(eventData string) time.Time {
 // parses the event end time
 func (p *Parser) parseEventEnd(eventData string) time.Time {
 	reWholeDay, _ := regexp.Compile(`DTEND;VALUE=DATE:.*?\n`)
-	re, _ := regexp.Compile(`DTEND(;TZID=.*?){0,1}:.*?\n`)
+	re, _ := regexp.Compile(`DTEND(;TZID=.*?){0,1}(;VALUE=DATE-TIME){0,1}:.*?\n`)
 	resultWholeDay := reWholeDay.FindString(eventData)
 	var t time.Time
 
@@ -530,7 +530,7 @@ func (p *Parser) parseEventEnd(eventData string) time.Time {
 	} else {
 		// event that has end hour and minute
 		result := re.FindString(eventData)
-		modified := trimField(result, "DTEND(;TZID=.*?){0,1}:")
+		modified := trimField(result, "DTEND(;TZID=.*?){0,1}(;VALUE=DATE-TIME){0,1}:")
 
 		if !strings.Contains(modified, "Z") {
 			modified = fmt.Sprintf("%sZ", modified)
@@ -623,7 +623,13 @@ func (p *Parser) parseAttendee(attendeeData string) *Attendee {
 func (p *Parser) parseAttendeeMail(attendeeData string) string {
 	re, _ := regexp.Compile(`mailto:.*?\n`)
 	result := re.FindString(attendeeData)
-	return trimField(result, "mailto:")
+	if result != "" {
+		return trimField(result, "mailto:")
+	}
+
+	re, _ = regexp.Compile(`\w+@[a-zA-Z_]+?\.[a-zA-Z]{2,4}\n`)
+	result = re.FindString(attendeeData)
+	return trimField(result, "")
 }
 
 // parses the attendee status
