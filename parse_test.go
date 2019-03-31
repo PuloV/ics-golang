@@ -33,6 +33,44 @@ func TestLoadCalendar(t *testing.T) {
 	if len(calendars) != 1 {
 		t.Errorf("Expected 1 calendar, found %d calendars", len(calendars))
 	}
+
+	xWrTimezone := calendars[0].GetTimezone()
+	if xWrTimezone.String() != "Europe/Sofia" {
+		t.Errorf("Time should be Europe/Sofia, got %s", xWrTimezone.String())
+	}
+}
+
+func TestRfcTimezoneCalendar(t *testing.T) {
+	fmt.Println("RFC!!!")
+	parser := New()
+	calBytes, err := ioutil.ReadFile("testCalendars/rfctimezone.ics")
+	if err != nil {
+		t.Errorf("Failed to read calendar file ( %s )", err)
+	}
+
+	parser.Load(string(calBytes))
+
+	parseErrors, err := parser.GetErrors()
+	if err != nil {
+		t.Errorf("Failed to wait the parse of the calendars ( %s )", err)
+	}
+	for i, pErr := range parseErrors {
+		t.Errorf("Parsing Error №%d: %s", i, pErr)
+	}
+
+	calendars, errCal := parser.GetCalendars()
+	if errCal != nil {
+		t.Errorf("Failed to get calendars ( %s )", errCal)
+	}
+	if len(calendars) != 1 {
+		t.Errorf("Expected 1 calendar, found %d calendars", len(calendars))
+	}
+
+	rfcTimezone := calendars[0].GetTimezone()
+	if rfcTimezone.String() != "Europe/Sofia" {
+		t.Errorf("Time should be Europe/Sofia, got %s", rfcTimezone.String())
+	}
+	fmt.Println("RFC END!!!")
 }
 
 func TestNewParser(t *testing.T) {
@@ -51,12 +89,12 @@ func TestNewParserChans(t *testing.T) {
 	rType := fmt.Sprintf("%v", reflect.TypeOf(input))
 
 	if rType != "chan string" {
-		t.Errorf("Failed to create a input chan! Received: Type %s Value %s", rType, input)
+		t.Errorf("Failed to create a input chan! Received: Type %s", rType)
 	}
 
 	rType = fmt.Sprintf("%v", reflect.TypeOf(output))
 	if rType != "chan *ics.Event" {
-		t.Errorf("Failed to create a output chan! Received: Type %s Value %s", rType, output)
+		t.Errorf("Failed to create a output chan! Received: Type %s", rType)
 	}
 }
 
@@ -375,7 +413,7 @@ func TestCalendarEvents(t *testing.T) {
 	}
 
 	if event.GetSequence() != seq {
-		t.Errorf("Expected sequence %s, found %s", seq, event.GetSequence())
+		t.Errorf("Expected sequence %v, found %v", seq, event.GetSequence())
 	}
 
 	if event.GetStatus() != status {
@@ -391,7 +429,7 @@ func TestCalendarEvents(t *testing.T) {
 	}
 
 	if len(event.GetAttendees()) != attendeesCount {
-		t.Errorf("Expected attendeesCount %s, found %s", attendeesCount, len(event.GetAttendees()))
+		t.Errorf("Expected attendeesCount %v, found %v", attendeesCount, len(event.GetAttendees()))
 	}
 
 	eventOrg := event.GetOrganizer()
@@ -409,7 +447,7 @@ func TestCalendarEvents(t *testing.T) {
 	}
 
 	if len(eventNoAttendees.GetAttendees()) != attendeesCount {
-		t.Errorf("Expected attendeesCount %s, found %s", attendeesCount, len(event.GetAttendees()))
+		t.Errorf("Expected attendeesCount %v, found %v", attendeesCount, len(event.GetAttendees()))
 	}
 
 	if eventNoAttendees.GetOrganizer() != nil {
@@ -452,7 +490,7 @@ func TestCalendarEventAttendees(t *testing.T) {
 	attendeesCount := 3
 
 	if len(attendees) != attendeesCount {
-		t.Errorf("Expected attendeesCount %s, found %s", attendeesCount, len(attendees))
+		t.Errorf("Expected attendeesCount %v, found %v", attendeesCount, len(attendees))
 		return
 	}
 

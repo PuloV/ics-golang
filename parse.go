@@ -240,21 +240,46 @@ func (p *Parser) parseICalVersion(iCalContent string) float64 {
 
 // parses the iCal timezone
 func (p *Parser) parseICalTimezone(iCalContent string) time.Location {
-	re, _ := regexp.Compile(`X-WR-TIMEZONE:.*?\n`)
-	result := re.FindString(iCalContent)
+	loc, err := p.parseICalXWrTimezone(iCalContent)
 
-	// parse the timezone result to time.Location
-	timezone := trimField(result, "X-WR-TIMEZONE:")
-	// create location instance
-	loc, err := time.LoadLocation(timezone)
+	if err != nil {
+		loc, err = p.parseICalRfcTimezone(iCalContent)
+	}
 
-	// if fails with the timezone => go Local
 	if err != nil {
 		p.errorsOccured = append(p.errorsOccured, err)
 		loc, _ = time.LoadLocation("UTC")
 	}
+
 	return *loc
 }
+
+func (p *Parser) parseICalXWrTimezone(iCalContent string) (*time.Location, error) {
+	re, _ := regexp.Compile(`X-WR-TIMEZONE:.*?\n`)
+	result := re.FindString(iCalContent)
+	if result == "" {
+		return nil, errors.New("can't find timezone")
+	}
+
+	// parse the timezone result to time.Location
+	timezone := trimField(result, "X-WR-TIMEZONE:")
+	// create location instance
+	return time.LoadLocation(timezone)
+}
+
+func (p *Parser) parseICalRfcTimezone(iCalContent string) (*time.Location, error) {
+	re, _ := regexp.Compile(`TZID:.*?\n`)
+	result := re.FindString(iCalContent)
+	if result == "" {
+		return nil, errors.New("can't find timezone")
+	}
+
+	// parse the timezone result to time.Location
+	timezone := trimField(result, "TZID:")
+	// create location instance
+	return time.LoadLocation(timezone)
+}
+
 
 // ======================== EVENTS PARSING ===================
 
