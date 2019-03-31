@@ -288,8 +288,8 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 	for _, eventData := range eventsData {
 		event := NewEvent()
 
-		start := p.parseEventStart(eventData)
-		end := p.parseEventEnd(eventData)
+		start := p.parseEventStart(eventData, cal.GetTimezone())
+		end := p.parseEventEnd(eventData, cal.GetTimezone())
 		// whole day event when both times are 00:00:00
 		wholeDay := start.Hour() == 0 && end.Hour() == 0 && start.Minute() == 0 && end.Minute() == 0 && start.Second() == 0 && end.Second() == 0
 
@@ -524,7 +524,7 @@ func (p *Parser) parseEventModified(eventData string) time.Time {
 }
 
 // parses the event start time
-func (p *Parser) parseEventStart(eventData string) time.Time {
+func (p *Parser) parseEventStart(eventData string, loc time.Location) time.Time {
 	re, _ := regexp.Compile(`DTSTART(;.*?)?:.*?\n`)
 	var t time.Time
 
@@ -533,21 +533,21 @@ func (p *Parser) parseEventStart(eventData string) time.Time {
 
 	if len(modified) == 8 {
 		// whole day event
-		t, _ = time.Parse(IcsFormatWholeDay, modified)
+		t, _ = time.ParseInLocation(IcsFormatWholeDay, modified, &loc)
 	} else {
 		// event that has start hour and minute
 		if !strings.Contains(modified, "Z") {
 			modified = fmt.Sprintf("%sZ", modified)
 		}
 
-		t, _ = time.Parse(IcsFormat, modified)
+		t, _ = time.ParseInLocation(IcsFormat, modified, &loc)
 	}
 
 	return t
 }
 
 // parses the event end time
-func (p *Parser) parseEventEnd(eventData string) time.Time {
+func (p *Parser) parseEventEnd(eventData string, loc time.Location) time.Time {
 	reWholeDay, _ := regexp.Compile(`DTEND;VALUE=DATE:.*?\n`)
 	re, _ := regexp.Compile(`DTEND(;TZID=.*?){0,1}:.*?\n`)
 	resultWholeDay := reWholeDay.FindString(eventData)
@@ -556,7 +556,7 @@ func (p *Parser) parseEventEnd(eventData string) time.Time {
 	if resultWholeDay != "" {
 		// whole day event
 		modified := trimField(resultWholeDay, "DTEND;VALUE=DATE:")
-		t, _ = time.Parse(IcsFormatWholeDay, modified)
+		t, _ = time.ParseInLocation(IcsFormatWholeDay, modified, &loc)
 	} else {
 		// event that has end hour and minute
 		result := re.FindString(eventData)
@@ -565,7 +565,7 @@ func (p *Parser) parseEventEnd(eventData string) time.Time {
 		if !strings.Contains(modified, "Z") {
 			modified = fmt.Sprintf("%sZ", modified)
 		}
-		t, _ = time.Parse(IcsFormat, modified)
+		t, _ = time.ParseInLocation(IcsFormat, modified, &loc)
 	}
 	return t
 

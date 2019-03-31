@@ -35,13 +35,12 @@ func TestLoadCalendar(t *testing.T) {
 	}
 
 	xWrTimezone := calendars[0].GetTimezone()
-	if xWrTimezone.String() != "Europe/Sofia" {
-		t.Errorf("Time should be Europe/Sofia, got %s", xWrTimezone.String())
+	if xWrTimezone.String() != "UTC" {
+		t.Errorf("Time should be UTC, got %s", xWrTimezone.String())
 	}
 }
 
 func TestRfcTimezoneCalendar(t *testing.T) {
-	fmt.Println("RFC!!!")
 	parser := New()
 	calBytes, err := ioutil.ReadFile("testCalendars/rfctimezone.ics")
 	if err != nil {
@@ -70,7 +69,6 @@ func TestRfcTimezoneCalendar(t *testing.T) {
 	if rfcTimezone.String() != "Europe/Sofia" {
 		t.Errorf("Time should be Europe/Sofia, got %s", rfcTimezone.String())
 	}
-	fmt.Println("RFC END!!!")
 }
 
 func TestNewParser(t *testing.T) {
@@ -380,11 +378,11 @@ func TestCalendarEvents(t *testing.T) {
 	org.SetName("r.chupetlovska@gmail.com")
 	org.SetEmail("r.chupetlovska@gmail.com")
 
-	if event.GetStart() != start {
+	if event.GetStart().String() != start.String() {
 		t.Errorf("Expected start %s, found %s", start, event.GetStart())
 	}
 
-	if event.GetEnd() != end {
+	if event.GetEnd().String() != end.String() {
 		t.Errorf("Expected end %s, found %s", end, event.GetEnd())
 	}
 

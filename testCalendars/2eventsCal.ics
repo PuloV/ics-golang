@@ -5,7 +5,7 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:2 Events Cal
 X-WR-CALDESC:The cal has 2 events(1st with attendees and second without)
-X-WR-TIMEZONE:Europe/Sofia
+X-WR-TIMEZONE:UTC
 BEGIN:VTIMEZONE
 TZID:Europe/Sofia
 X-LIC-LOCATION:Europe/Sofia
