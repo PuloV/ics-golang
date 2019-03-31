@@ -103,6 +103,11 @@ func New() *Parser {
 	return p
 }
 
+// Load calender from content
+func (p *Parser) Load(iCalContent string) {
+	p.parseICalContent(iCalContent, "")
+}
+
 //  returns the chan for calendar urls
 func (p *Parser) GetInputChan() chan string {
 	return p.inputChan
@@ -274,6 +279,7 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 		event.SetLastModified(p.parseEventModified(eventData))
 		event.SetRRule(p.parseEventRRule(eventData))
 		event.SetLocation(p.parseEventLocation(eventData))
+		event.SetGeo(p.parseEventGeo(eventData))
 		event.SetStart(start)
 		event.SetEnd(end)
 		event.SetWholeDayEvent(wholeDay)
@@ -317,15 +323,15 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 			}
 
 			// freq field
-			reFr, _ := regexp.Compile(`FREQ=.*?;`)
+			reFr, _ := regexp.Compile(`FREQ=[^;]*(;){0,1}`)
 			freq := trimField(reFr.FindString(event.GetRRule()), `(FREQ=|;)`)
 
 			// by month field
-			reBM, _ := regexp.Compile(`BYMONTH=.*?;`)
+			reBM, _ := regexp.Compile(`BYMONTH=[^;]*(;){0,1}`)
 			bymonth := trimField(reBM.FindString(event.GetRRule()), `(BYMONTH=|;)`)
 
 			// by day field
-			reBD, _ := regexp.Compile(`BYDAY=.*?(;|){0,1}\z`)
+			reBD, _ := regexp.Compile(`BYDAY=[^;]*(;){0,1}`)
 			byday := trimField(reBD.FindString(event.GetRRule()), `(BYDAY=|;)`)
 
 			// fmt.Printf("%#v \n", reBD.FindString(event.GetRRule()))
@@ -359,45 +365,48 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 			// number of current repeats
 			current := 0
 			// the current date in the main loop
-			freqDate := start
+			freqDateStart := start
+			freqDateEnd := end
 
 			// loops by freq
 			for {
-				weekDays := freqDate
+				weekDaysStart := freqDateStart
+				weekDaysEnd := freqDateEnd
 
 				// check repeating by month
-				if bymonth == "" || strings.Contains(bymonth, weekDays.Format("1")) {
+				if bymonth == "" || strings.Contains(bymonth, weekDaysStart.Format("1")) {
 
 					if byday != "" {
 						// loops the weekdays
 						for i := 0; i < 7; i++ {
-							day := parseDayNameToIcsName(weekDays.Format("Mon"))
-							if strings.Contains(byday, day) && weekDays != start {
+							day := parseDayNameToIcsName(weekDaysStart.Format("Mon"))
+							if strings.Contains(byday, day) && weekDaysStart != start {
 								current++
 								count--
 								newE := *event
-								newE.SetStart(weekDays)
-								newE.SetEnd(weekDays)
+								newE.SetStart(weekDaysStart)
+								newE.SetEnd(weekDaysEnd)
 								newE.SetID(newE.GenerateEventId())
 								newE.SetSequence(current)
-								if until == nil || (until != nil && until.Format(YmdHis) >= weekDays.Format(YmdHis)) {
+								if until == nil || (until != nil && until.Format(YmdHis) >= weekDaysStart.Format(YmdHis)) {
 									cal.SetEvent(newE)
 								}
 
 							}
-							weekDays = weekDays.AddDate(0, 0, 1)
+							weekDaysStart = weekDaysStart.AddDate(0, 0, 1)
+							weekDaysEnd = weekDaysEnd.AddDate(0, 0, 1)
 						}
 					} else {
 						//  we dont have loop by day so we put it on the same day
-						if weekDays != start {
+						if weekDaysStart != start {
 							current++
 							count--
 							newE := *event
-							newE.SetStart(weekDays)
-							newE.SetEnd(weekDays)
+							newE.SetStart(weekDaysStart)
+							newE.SetEnd(weekDaysEnd)
 							newE.SetID(newE.GenerateEventId())
 							newE.SetSequence(current)
-							if until == nil || (until != nil && until.Format(YmdHis) >= weekDays.Format(YmdHis)) {
+							if until == nil || (until != nil && until.Format(YmdHis) >= weekDaysStart.Format(YmdHis)) {
 								cal.SetEvent(newE)
 							}
 
@@ -406,20 +415,19 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 
 				}
 
-				freqDate = freqDate.AddDate(years, months, days)
+				freqDateStart = freqDateStart.AddDate(years, months, days)
+				freqDateEnd = freqDateEnd.AddDate(years, months, days)
 				if current > MaxRepeats || count == 0 {
 					break
 				}
 
-				if until != nil && until.Format(YmdHis) <= freqDate.Format(YmdHis) {
+				if until != nil && until.Format(YmdHis) <= freqDateStart.Format(YmdHis) {
 					break
 				}
 			}
 
 		}
-
 	}
-
 }
 
 // parses the event summary
@@ -438,9 +446,9 @@ func (p *Parser) parseEventStatus(eventData string) string {
 
 // parses the event description
 func (p *Parser) parseEventDescription(eventData string) string {
-	re, _ := regexp.Compile(`DESCRIPTION:.*?\n`)
+	re, _ := regexp.Compile(`DESCRIPTION:.*?\n(?:\s+.*?\n)*`)
 	result := re.FindString(eventData)
-	return trimField(result, "DESCRIPTION:")
+	return trimField(strings.Replace(result, "\r\n ", "", -1), "DESCRIPTION:")
 }
 
 // parses the event id provided form google
@@ -545,11 +553,25 @@ func (p *Parser) parseEventRRule(eventData string) string {
 	return trimField(result, "RRULE:")
 }
 
-// parses the event RRULE (the repeater)
+// parses the event LOCATION
 func (p *Parser) parseEventLocation(eventData string) string {
 	re, _ := regexp.Compile(`LOCATION:.*?\n`)
 	result := re.FindString(eventData)
 	return trimField(result, "LOCATION:")
+}
+
+// parses the event GEO
+func (p *Parser) parseEventGeo(eventData string) *Geo {
+	re, _ := regexp.Compile(`GEO:.*?\n`)
+	result := re.FindString(eventData)
+
+	value := trimField(result, "GEO:")
+	values := strings.Split(value, ";")
+	if len(values) < 2 {
+		return nil
+	}
+
+	return NewGeo(values[0], values[1])
 }
 
 // ======================== ATTENDEE PARSING ===================

@@ -3,6 +3,7 @@ package ics
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"time"
 )
 
@@ -12,10 +13,24 @@ type Calendar struct {
 	url               string
 	version           float64
 	timezone          time.Location
-	events            []Event
+	events            Events
 	eventsByDate      map[string][]*Event
 	eventByID         map[string]*Event
 	eventByImportedID map[string]*Event
+}
+
+type Events []Event
+
+func (events Events) Len() int {
+	return len(events)
+}
+
+func (events Events) Less(i, j int) bool {
+	return events[i].start.Before(events[j].start)
+}
+
+func (events Events) Swap(i, j int) {
+	events[i], events[j] = events[j], events[i]
 }
 
 func NewCalendar() *Calendar {
@@ -78,13 +93,18 @@ func (c *Calendar) SetEvent(event Event) (*Calendar, error) {
 	// pointer to the added event in the main array
 	eventPtr := &c.events[len(c.events)-1]
 
-	// calculate the start day of the event
+	// calculate the start and end day of the event
 	eventStartTime := event.GetStart()
+	eventEndTime := event.GetEnd()
 	tz := c.GetTimezone()
-	eventDate := time.Date(eventStartTime.Year(), eventStartTime.Month(), eventStartTime.Day(), 0, 0, 0, 0, &tz)
+	eventStartDate := time.Date(eventStartTime.Year(), eventStartTime.Month(), eventStartTime.Day(), 0, 0, 0, 0, &tz)
+	eventEndDate := time.Date(eventEndTime.Year(), eventEndTime.Month(), eventEndTime.Day(), 0, 0, 0, 0, &tz)
 
-	// faster search by date
-	c.eventsByDate[eventDate.Format(YmdHis)] = append(c.eventsByDate[eventDate.Format(YmdHis)], eventPtr)
+	// faster search by date, add each date from start to end date
+	for eventDate := eventStartDate; eventDate.Before(eventEndDate) || eventDate.Equal(eventEndDate); eventDate = eventDate.Add(24 * time.Hour) {
+		c.eventsByDate[eventDate.Format(YmdHis)] = append(c.eventsByDate[eventDate.Format(YmdHis)], eventPtr)
+	}
+
 	// faster search by id
 	c.eventByID[event.GetID()] = eventPtr
 
@@ -133,6 +153,28 @@ func (c *Calendar) GetEventsByDate(dateTime time.Time) ([]*Event, error) {
 		return events, nil
 	}
 	return nil, errors.New(fmt.Sprintf("There are no events for the day %s", day.Format(YmdHis)))
+}
+
+// GetUpcomingEvents returns the next n-Events.
+func (c *Calendar) GetUpcomingEvents(n int) []Event {
+	upcomingEvents := []Event{}
+
+	// sort events of calendar
+	sort.Sort(c.events)
+
+	now := time.Now()
+	// find next event
+	for _, event := range c.events {
+		if event.GetStart().After(now) {
+			upcomingEvents = append(upcomingEvents, event)
+			// break if we collect enough events
+			if len(upcomingEvents) >= n {
+				break
+			}
+		}
+	}
+
+	return upcomingEvents
 }
 
 func (c *Calendar) String() string {
