@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	duration "github.com/channelmeter/iso8601duration"
 )
 
 func init() {
@@ -265,6 +267,11 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 
 		start, startTZID := p.parseEventStart(eventData)
 		end, endTZID := p.parseEventEnd(eventData)
+		duration := p.parseEventDuration(eventData)
+
+		if end.Before(start) {
+			end = start.Add(duration)
+		}
 		// whole day event when both times are 00:00:00
 		wholeDay := start.Hour() == 0 && end.Hour() == 0 && start.Minute() == 0 && end.Minute() == 0 && start.Second() == 0 && end.Second() == 0
 
@@ -433,9 +440,9 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 
 // parses the event summary
 func (p *Parser) parseEventSummary(eventData string) string {
-	re, _ := regexp.Compile(`SUMMARY:.*?\n`)
+	re, _ := regexp.Compile(`SUMMARY(?:;LANGUAGE=[a-zA-Z\-]+)?.*?\n`)
 	result := re.FindString(eventData)
-	return trimField(result, "SUMMARY:")
+	return trimField(result, `SUMMARY(?:;LANGUAGE=[a-zA-Z\-]+)?:`)
 }
 
 // parses the event status
@@ -529,6 +536,20 @@ func (p *Parser) parseEventStart(eventData string) (time.Time, string) {
 // parses the event end time
 func (p *Parser) parseEventEnd(eventData string) (time.Time, string) {
 	return p.parseTimeField("DTEND", eventData)
+}
+
+func (p *Parser) parseEventDuration(eventData string) time.Duration {
+	reDuration, _ := regexp.Compile(`DURATION:.*?\n`)
+	result := reDuration.FindString(eventData)
+	trimmed := trimField(result, "DURATION:")
+	parsedDuration, err := duration.FromString(trimmed)
+	var output time.Duration
+
+	if err == nil {
+		output = parsedDuration.ToDuration()
+	}
+
+	return output
 }
 
 // parses the event RRULE (the repeater)
