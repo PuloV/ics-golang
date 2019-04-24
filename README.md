@@ -1,6 +1,10 @@
 # ics-golang
 Golang ics parser
 
+## CI
+
+[![CircleCI](https://circleci.com/gh/PuloV/ics-golang.svg?style=svg)](https://circleci.com/gh/PuloV/ics-golang)
+
 ## Installation
 `go get github.com/PuloV/ics-golang`
 
