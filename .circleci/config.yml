@@ -14,4 +14,4 @@ jobs:
       - run: go test -v -cover -coverprofile=/tmp/test-results/coverage.out ./... > /tmp/test-results/results.json
 
       - store_test_results: # upload test results for display in Test Summary
-        path: /tmp/test-results
+          path: /tmp/test-results
