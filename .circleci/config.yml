@@ -11,4 +11,7 @@ jobs:
 
       # specify any bash command here prefixed with `run: `
       - run: go get -v -t -d ./...
-      - run: go test -v -cover -race ./...
+      - run: go test -v -cover -coverprofile=/tmp/test-results/coverage.out ./... > /tmp/test-results/results.json
+
+      - store_test_results: # upload test results for display in Test Summary
+        path: /tmp/test-results
