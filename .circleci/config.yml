@@ -8,7 +8,7 @@ jobs:
     working_directory: /go/src/github.com/PuloV/ics-golang
 
     environment: # environment variables for the build itself
-      TEST_RESULTS: /tmp/test-results/junit # path to where test results will be saved
+      TEST_RESULTS: /tmp/test-results # path to where test results will be saved
 
     steps:
       - checkout
