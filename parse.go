@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	duration "github.com/channelmeter/iso8601duration"
 )
 
 func init() {
@@ -263,11 +265,18 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 	for _, eventData := range eventsData {
 		event := NewEvent()
 
-		start := p.parseEventStart(eventData)
-		end := p.parseEventEnd(eventData)
+		start, startTZID := p.parseEventStart(eventData)
+		end, endTZID := p.parseEventEnd(eventData)
+		duration := p.parseEventDuration(eventData)
+
+		if end.Before(start) {
+			end = start.Add(duration)
+		}
 		// whole day event when both times are 00:00:00
 		wholeDay := start.Hour() == 0 && end.Hour() == 0 && start.Minute() == 0 && end.Minute() == 0 && start.Second() == 0 && end.Second() == 0
 
+		event.SetStartTZID(startTZID)
+		event.SetEndTZID(endTZID)
 		event.SetStatus(p.parseEventStatus(eventData))
 		event.SetSummary(p.parseEventSummary(eventData))
 		event.SetDescription(p.parseEventDescription(eventData))
@@ -431,9 +440,9 @@ func (p *Parser) parseEvents(cal *Calendar, eventsData []string) {
 
 // parses the event summary
 func (p *Parser) parseEventSummary(eventData string) string {
-	re, _ := regexp.Compile(`SUMMARY:.*?\n`)
+	re, _ := regexp.Compile(`SUMMARY(?:;LANGUAGE=[a-zA-Z\-]+)?.*?\n`)
 	result := re.FindString(eventData)
-	return trimField(result, "SUMMARY:")
+	return trimField(result, `SUMMARY(?:;LANGUAGE=[a-zA-Z\-]+)?:`)
 }
 
 // parses the event status
@@ -491,54 +500,56 @@ func (p *Parser) parseEventModified(eventData string) time.Time {
 }
 
 // parses the event start time
-func (p *Parser) parseEventStart(eventData string) time.Time {
-	reWholeDay, _ := regexp.Compile(`DTSTART;VALUE=DATE:.*?\n`)
-	re, _ := regexp.Compile(`DTSTART(;TZID=.*?){0,1}(;VALUE=DATE-TIME){0,1}:.*?\n`)
+func (p *Parser) parseTimeField(fieldName string, eventData string) (time.Time, string) {
+	reWholeDay, _ := regexp.Compile(fmt.Sprintf(`%s;VALUE=DATE:.*?\n`, fieldName))
+	re, _ := regexp.Compile(fmt.Sprintf(`%s(;TZID=(.*?))?:(.*?)\n`, fieldName))
 	resultWholeDay := reWholeDay.FindString(eventData)
 	var t time.Time
+	var tzID string
 
 	if resultWholeDay != "" {
 		// whole day event
-		modified := trimField(resultWholeDay, "DTSTART;VALUE=DATE:")
+		modified := trimField(resultWholeDay, fmt.Sprintf("%s;VALUE=DATE:", fieldName))
 		t, _ = time.Parse(IcsFormatWholeDay, modified)
 	} else {
 		// event that has start hour and minute
-		result := re.FindString(eventData)
-		modified := trimField(result, "DTSTART(;TZID=.*?){0,1}(;VALUE=DATE-TIME){0,1}:")
-
-		if !strings.Contains(modified, "Z") {
-			modified = fmt.Sprintf("%sZ", modified)
+		result := re.FindStringSubmatch(eventData)
+		if result == nil || len(result) < 4 {
+			return t, tzID
 		}
-
-		t, _ = time.Parse(IcsFormat, modified)
+		tzID = result[2]
+		dt := result[3]
+		if !strings.Contains(dt, "Z") {
+			dt = fmt.Sprintf("%sZ", dt)
+		}
+		t, _ = time.Parse(IcsFormat, dt)
 	}
 
-	return t
+	return t, tzID
+}
+
+// parses the event start time
+func (p *Parser) parseEventStart(eventData string) (time.Time, string) {
+	return p.parseTimeField("DTSTART", eventData)
 }
 
 // parses the event end time
-func (p *Parser) parseEventEnd(eventData string) time.Time {
-	reWholeDay, _ := regexp.Compile(`DTEND;VALUE=DATE:.*?\n`)
-	re, _ := regexp.Compile(`DTEND(;TZID=.*?){0,1}(;VALUE=DATE-TIME){0,1}:.*?\n`)
-	resultWholeDay := reWholeDay.FindString(eventData)
-	var t time.Time
+func (p *Parser) parseEventEnd(eventData string) (time.Time, string) {
+	return p.parseTimeField("DTEND", eventData)
+}
 
-	if resultWholeDay != "" {
-		// whole day event
-		modified := trimField(resultWholeDay, "DTEND;VALUE=DATE:")
-		t, _ = time.Parse(IcsFormatWholeDay, modified)
-	} else {
-		// event that has end hour and minute
-		result := re.FindString(eventData)
-		modified := trimField(result, "DTEND(;TZID=.*?){0,1}(;VALUE=DATE-TIME){0,1}:")
+func (p *Parser) parseEventDuration(eventData string) time.Duration {
+	reDuration, _ := regexp.Compile(`DURATION:.*?\n`)
+	result := reDuration.FindString(eventData)
+	trimmed := trimField(result, "DURATION:")
+	parsedDuration, err := duration.FromString(trimmed)
+	var output time.Duration
 
-		if !strings.Contains(modified, "Z") {
-			modified = fmt.Sprintf("%sZ", modified)
-		}
-		t, _ = time.Parse(IcsFormat, modified)
+	if err == nil {
+		output = parsedDuration.ToDuration()
 	}
-	return t
 
+	return output
 }
 
 // parses the event RRULE (the repeater)
@@ -623,13 +634,7 @@ func (p *Parser) parseAttendee(attendeeData string) *Attendee {
 func (p *Parser) parseAttendeeMail(attendeeData string) string {
 	re, _ := regexp.Compile(`mailto:.*?\n`)
 	result := re.FindString(attendeeData)
-	if result != "" {
-		return trimField(result, "mailto:")
-	}
-
-	re, _ = regexp.Compile(`\w+@[a-zA-Z_]+?\.[a-zA-Z]{2,4}\n`)
-	result = re.FindString(attendeeData)
-	return trimField(result, "")
+	return trimField(result, "mailto:")
 }
 
 // parses the attendee status

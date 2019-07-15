@@ -9,6 +9,8 @@ import (
 type Event struct {
 	start         time.Time
 	end           time.Time
+	startTZID     string
+	endTZID       string
 	created       time.Time
 	modified      time.Time
 	alarmTime     time.Duration
@@ -51,6 +53,22 @@ func (e *Event) SetEnd(end time.Time) *Event {
 
 func (e *Event) GetEnd() time.Time {
 	return e.end
+}
+
+func (e *Event) SetStartTZID(tzid string) {
+	e.startTZID = tzid
+}
+
+func (e *Event) GetStartTZID() string {
+	return e.startTZID
+}
+
+func (e *Event) SetEndTZID(tzid string) {
+	e.endTZID = tzid
+}
+
+func (e *Event) GetEndTZID() string {
+	return e.endTZID
 }
 
 func (e *Event) SetID(id string) *Event {
@@ -204,7 +222,7 @@ func (e *Event) IsWholeDay() bool {
 //  generates an unique id for the event
 func (e *Event) GenerateEventId() string {
 	if e.GetImportedID() != "" {
-		toBeHashed := fmt.Sprintf("%s%s%s%s", e.GetStart(), e.GetEnd(), e.GetImportedID())
+		toBeHashed := fmt.Sprintf("%s%s%s", e.GetStart(), e.GetEnd(), e.GetImportedID())
 		return fmt.Sprintf("%x", md5.Sum(stringToByte(toBeHashed)))
 	} else {
 		toBeHashed := fmt.Sprintf("%s%s%s%s", e.GetStart(), e.GetEnd(), e.GetSummary(), e.GetDescription())

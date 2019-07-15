@@ -51,12 +51,12 @@ func TestNewParserChans(t *testing.T) {
 	rType := fmt.Sprintf("%v", reflect.TypeOf(input))
 
 	if rType != "chan string" {
-		t.Errorf("Failed to create a input chan! Received: Type %s Value %s", rType, input)
+		t.Errorf("Failed to create a input chan! Received: Type %s Value %v", rType, input)
 	}
 
 	rType = fmt.Sprintf("%v", reflect.TypeOf(output))
 	if rType != "chan *ics.Event" {
-		t.Errorf("Failed to create a output chan! Received: Type %s Value %s", rType, output)
+		t.Errorf("Failed to create a output chan! Received: Type %s Value %v", rType, output)
 	}
 }
 
@@ -292,6 +292,63 @@ func TestCalendarInfo(t *testing.T) {
 
 }
 
+func TestOutlookCalendarEventTimes(t *testing.T) {
+	parser := New()
+	input := parser.GetInputChan()
+	input <- "testCalendars/outlook.ics"
+	parser.Wait()
+
+	parseErrors, err := parser.GetErrors()
+
+	if err != nil {
+		t.Errorf("Failed to wait the parse of the calendars ( %s )", err)
+	}
+	if len(parseErrors) != 0 {
+		t.Errorf("Expected 0 error, found %d in :\n  %#v", len(parseErrors), parseErrors)
+	}
+
+	calendars, errCal := parser.GetCalendars()
+	if errCal != nil {
+		t.Fatalf("Failed to retrieve calendars: %s", err.Error())
+	}
+	if len(calendars) < 1 {
+		t.Fatalf("The test calendar file should have at least included one calendar")
+	}
+	evts := calendars[0].GetEvents()
+	if len(evts) < 1 {
+		t.Fatalf("The test calendar should have included at least one event")
+	}
+
+	// Sadly, expectedStart and expectedEnd are actually wrong given the TZID:
+	evt := evts[0]
+	expectedStart, err := time.Parse(time.RFC3339, "2017-10-24T08:00:00+02:00")
+	if err != nil {
+		t.Fatalf("Failed to parse reference start: %s", err.Error())
+	}
+	start := evt.GetStart()
+	expectedEnd, err := time.Parse(time.RFC3339, "2017-10-24T10:00:00+02:00")
+	if err != nil {
+		t.Fatalf("Failed to parse reference end: %s", err.Error())
+	}
+	end := evt.GetEnd()
+
+	if !start.Equal(expectedStart) {
+		t.Fatalf("Start should be %s, but was %s", expectedStart, start)
+	}
+	if !end.Equal(expectedEnd) {
+		t.Fatalf("End should be %s, but was %s", expectedEnd, end)
+	}
+
+	expectedTZID := "Romance Standard Time"
+	if evt.GetStartTZID() != expectedTZID {
+		t.Fatalf("StartTZID should be %s, but was %s", expectedTZID, evt.GetStartTZID())
+	}
+	if evt.GetEndTZID() != expectedTZID {
+		t.Fatalf("EndTZID should be %s, but was %s", expectedTZID, evt.GetEndTZID())
+	}
+
+}
+
 func TestCalendarEvents(t *testing.T) {
 	parser := New()
 	input := parser.GetInputChan()
@@ -375,7 +432,7 @@ func TestCalendarEvents(t *testing.T) {
 	}
 
 	if event.GetSequence() != seq {
-		t.Errorf("Expected sequence %s, found %s", seq, event.GetSequence())
+		t.Errorf("Expected sequence %d, found %d", seq, event.GetSequence())
 	}
 
 	if event.GetStatus() != status {
@@ -391,7 +448,7 @@ func TestCalendarEvents(t *testing.T) {
 	}
 
 	if len(event.GetAttendees()) != attendeesCount {
-		t.Errorf("Expected attendeesCount %s, found %s", attendeesCount, len(event.GetAttendees()))
+		t.Errorf("Expected attendeesCount %d, found %d", attendeesCount, len(event.GetAttendees()))
 	}
 
 	eventOrg := event.GetOrganizer()
@@ -409,7 +466,7 @@ func TestCalendarEvents(t *testing.T) {
 	}
 
 	if len(eventNoAttendees.GetAttendees()) != attendeesCount {
-		t.Errorf("Expected attendeesCount %s, found %s", attendeesCount, len(event.GetAttendees()))
+		t.Errorf("Expected attendeesCount %d, found %d", attendeesCount, len(event.GetAttendees()))
 	}
 
 	if eventNoAttendees.GetOrganizer() != nil {
@@ -452,7 +509,7 @@ func TestCalendarEventAttendees(t *testing.T) {
 	attendeesCount := 3
 
 	if len(attendees) != attendeesCount {
-		t.Errorf("Expected attendeesCount %s, found %s", attendeesCount, len(attendees))
+		t.Errorf("Expected attendeesCount %d, found %d", attendeesCount, len(attendees))
 		return
 	}
 
@@ -557,6 +614,64 @@ func TestCalendarMultidayEvent(t *testing.T) {
 
 	// Test a day after the end day
 	events, err = calendar.GetEventsByDate(time.Date(2016, 11, 1, 0, 0, 0, 0, time.UTC))
+	if err == nil {
+		t.Errorf("Expected no event after the end day, got %d", len(events))
+	}
+}
+
+func TestCalendarMultidayEventWithDurationInsteadOfEndDate(t *testing.T) {
+	parser := New()
+	input := parser.GetInputChan()
+	input <- "testCalendars/multiday_duration.ics"
+	parser.Wait()
+
+	parseErrors, err := parser.GetErrors()
+	if err != nil {
+		t.Errorf("Failed to wait the parse of the calendars ( %s )", err)
+	}
+	if len(parseErrors) != 0 {
+		t.Errorf("Expected 0 error, found %d in :\n  %#v", len(parseErrors), parseErrors)
+	}
+
+	calendars, errCal := parser.GetCalendars()
+	if errCal != nil {
+		t.Errorf("Failed to get calendars ( %s )", errCal)
+	}
+
+	if len(calendars) != 1 {
+		t.Errorf("Expected 1 calendar, found %d calendars", len(calendars))
+		return
+	}
+
+	calendar := calendars[0]
+
+	// Test a day before the start day
+	events, err := calendar.GetEventsByDate(time.Date(2016, 8, 31, 0, 0, 0, 0, time.UTC))
+	if err == nil {
+		t.Errorf("Expected no event before the start day, got %d", len(events))
+	}
+
+	// Test exact start day
+	events, err = calendar.GetEventsByDate(time.Date(2016, 9, 1, 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Errorf("Failed to get event: %s", err.Error())
+	}
+	if len(events) != 1 {
+		t.Errorf("Expected 1 event on the start day, got %d", len(events))
+	}
+
+	// Test a random day between start and end date
+	events, err = calendar.GetEventsByDate(time.Date(2016, 9, 2, 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Errorf("Failed to get event: %s", err.Error())
+	}
+	if len(events) != 1 {
+		t.Errorf("Expected 1 event between start and end, got %d", len(events))
+	}
+
+	// Test a day after the end day
+	events, err = calendar.GetEventsByDate(time.Date(2016, 9, 4, 0, 0, 0, 0, time.UTC))
+
 	if err == nil {
 		t.Errorf("Expected no event after the end day, got %d", len(events))
 	}

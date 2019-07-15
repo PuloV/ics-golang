@@ -1,0 +1,22 @@
+# Check https://circleci.com/docs/2.0/language-go/ for more details
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/golang:1.12
+
+    working_directory: /go/src/github.com/PuloV/ics-golang
+
+    environment: # environment variables for the build itself
+      TEST_RESULTS: /tmp/test-results # path to where test results will be saved
+
+    steps:
+      - checkout
+      - run: mkdir -p $TEST_RESULTS # create the test results directory
+
+      # specify any bash command here prefixed with `run: `
+      - run: go get -v -t -d ./...
+      - run: gotestsum -test.v --junitfile $TEST_RESULTS/gotestsum-report.xml
+
+      - store_test_results: # upload test results for display in Test Summary
+          path: /tmp/test-results
