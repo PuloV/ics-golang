@@ -502,7 +502,7 @@ func (p *Parser) parseEventModified(eventData string) time.Time {
 // parses the event start time
 func (p *Parser) parseTimeField(fieldName string, eventData string) (time.Time, string) {
 	reWholeDay, _ := regexp.Compile(fmt.Sprintf(`%s;VALUE=DATE:.*?\n`, fieldName))
-	re, _ := regexp.Compile(fmt.Sprintf(`%s(;TZID=(.*?))?:(.*?)\n`, fieldName))
+	re, _ := regexp.Compile(fmt.Sprintf(`%s(;TZID=(.*?))?(;VALUE=DATE-TIME)?:(.*?)\n`, fieldName))
 	resultWholeDay := reWholeDay.FindString(eventData)
 	var t time.Time
 	var tzID string
@@ -518,7 +518,7 @@ func (p *Parser) parseTimeField(fieldName string, eventData string) (time.Time, 
 			return t, tzID
 		}
 		tzID = result[2]
-		dt := result[3]
+		dt := result[4]
 		if !strings.Contains(dt, "Z") {
 			dt = fmt.Sprintf("%sZ", dt)
 		}
