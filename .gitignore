@@ -84,3 +84,4 @@ fabric.properties
 # vendor/
 
 tmp/
+testingTempDir/

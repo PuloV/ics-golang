@@ -62,7 +62,7 @@ func TestNewParserChans(t *testing.T) {
 
 func TestParsing0Calendars(t *testing.T) {
 	parser := New()
-	parser.Wait()
+	parser.WaitAndClose()
 
 	parseErrors, err := parser.GetErrors()
 
@@ -78,7 +78,7 @@ func TestParsing1Calendars(t *testing.T) {
 	parser := New()
 	input := parser.GetInputChan()
 	input <- "testCalendars/2eventsCal.ics"
-	parser.Wait()
+	parser.WaitAndClose()
 
 	parseErrors, err := parser.GetErrors()
 
@@ -106,7 +106,7 @@ func TestParsing2Calendars(t *testing.T) {
 	input := parser.GetInputChan()
 	input <- "testCalendars/2eventsCal.ics"
 	input <- "testCalendars/3eventsNoAttendee.ics"
-	parser.Wait()
+	parser.WaitAndClose()
 
 	parseErrors, err := parser.GetErrors()
 
@@ -133,7 +133,7 @@ func TestParsingNotExistingCalendar(t *testing.T) {
 	parser := New()
 	input := parser.GetInputChan()
 	input <- "testCalendars/notFound.ics"
-	parser.Wait()
+	parser.WaitAndClose()
 
 	parseErrors, err := parser.GetErrors()
 
@@ -151,7 +151,7 @@ func TestParsingNotExistingAndExistingCalendars(t *testing.T) {
 	input := parser.GetInputChan()
 	input <- "testCalendars/3eventsNoAttendee.ics"
 	input <- "testCalendars/notFound.ics"
-	parser.Wait()
+	parser.WaitAndClose()
 
 	parseErrors, err := parser.GetErrors()
 
@@ -177,7 +177,7 @@ func TestParsingWrongCalendarUrls(t *testing.T) {
 	parser := New()
 	input := parser.GetInputChan()
 	input <- "http://localhost/goTestFails"
-	parser.Wait()
+	parser.WaitAndClose()
 
 	parseErrors, err := parser.GetErrors()
 
@@ -204,7 +204,7 @@ func TestCreatingTempDir(t *testing.T) {
 	parser := New()
 	input := parser.GetInputChan()
 	input <- "https://www.google.com/calendar/ical/yordanpulov%40gmail.com/private-81525ac0eb14cdc2e858c15e1b296a1c/basic.ics"
-	parser.Wait()
+	parser.WaitAndClose()
 	_, err := os.Stat(FilePath)
 	if err != nil {
 		t.Errorf("Failed to create %s", FilePath)
@@ -219,7 +219,7 @@ func TestCalendarInfo(t *testing.T) {
 	parser := New()
 	input := parser.GetInputChan()
 	input <- "testCalendars/2eventsCal.ics"
-	parser.Wait()
+	parser.WaitAndClose()
 
 	parseErrors, err := parser.GetErrors()
 
@@ -296,7 +296,7 @@ func TestOutlookCalendarEventTimes(t *testing.T) {
 	parser := New()
 	input := parser.GetInputChan()
 	input <- "testCalendars/outlook.ics"
-	parser.Wait()
+	parser.WaitAndClose()
 
 	parseErrors, err := parser.GetErrors()
 
@@ -353,7 +353,7 @@ func TestCalendarEvents(t *testing.T) {
 	parser := New()
 	input := parser.GetInputChan()
 	input <- "testCalendars/2eventsCal.ics"
-	parser.Wait()
+	parser.WaitAndClose()
 
 	parseErrors, err := parser.GetErrors()
 
@@ -478,7 +478,7 @@ func TestCalendarEventAttendees(t *testing.T) {
 	parser := New()
 	input := parser.GetInputChan()
 	input <- "testCalendars/2eventsCal.ics"
-	parser.Wait()
+	parser.WaitAndClose()
 
 	parseErrors, err := parser.GetErrors()
 
@@ -566,7 +566,7 @@ func TestCalendarMultidayEvent(t *testing.T) {
 	parser := New()
 	input := parser.GetInputChan()
 	input <- "testCalendars/multiday.ics"
-	parser.Wait()
+	parser.WaitAndClose()
 
 	parseErrors, err := parser.GetErrors()
 	if err != nil {
@@ -623,7 +623,7 @@ func TestCalendarMultidayEventWithDurationInsteadOfEndDate(t *testing.T) {
 	parser := New()
 	input := parser.GetInputChan()
 	input <- "testCalendars/multiday_duration.ics"
-	parser.Wait()
+	parser.WaitAndClose()
 
 	parseErrors, err := parser.GetErrors()
 	if err != nil {
@@ -681,7 +681,7 @@ func TestPagerDutyCalendarEventTimes(t *testing.T) {
 	parser := New()
 	input := parser.GetInputChan()
 	input <- "testCalendars/pagerduty.ics"
-	parser.Wait()
+	parser.WaitAndClose()
 
 	parseErrors, err := parser.GetErrors()
 
