@@ -309,7 +309,7 @@ func TestOutlookCalendarEventTimes(t *testing.T) {
 
 	calendars, errCal := parser.GetCalendars()
 	if errCal != nil {
-		t.Fatalf("Failed to retrieve calendars: %s", err.Error())
+		t.Fatalf("Failed to retrieve calendars: %s", errCal)
 	}
 	if len(calendars) < 1 {
 		t.Fatalf("The test calendar file should have at least included one calendar")
@@ -694,7 +694,7 @@ func TestPagerDutyCalendarEventTimes(t *testing.T) {
 
 	calendars, errCal := parser.GetCalendars()
 	if errCal != nil {
-		t.Fatalf("Failed to retrieve calendars: %s", err.Error())
+		t.Fatalf("Failed to retrieve calendars: %s", errCal)
 	}
 	if len(calendars) < 1 {
 		t.Fatalf("The test calendar file should have at least included one calendar")
