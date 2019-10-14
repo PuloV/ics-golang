@@ -80,6 +80,12 @@ func (c *Calendar) GetTimezone() time.Location {
 
 //  add event to the calendar
 func (c *Calendar) SetEvent(event Event) (*Calendar, error) {
+	return c.addEvent(event), nil
+}
+
+//  add event to the calendar
+func (c *Calendar) addEvent(event Event) *Calendar {
+
 	//  lock so that the events array doesn't change its size from other goruote
 	mutex.Lock()
 
@@ -113,7 +119,7 @@ func (c *Calendar) SetEvent(event Event) (*Calendar, error) {
 	}
 
 	mutex.Unlock()
-	return c, nil
+	return c
 }
 
 //  get event by id
