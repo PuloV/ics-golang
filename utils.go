@@ -32,8 +32,11 @@ var MaxRepeats int
 //  unixtimestamp
 const uts = "1136239445"
 
+//ics date time format without timezone
+const IcsFormatWithoutTZ = "20060102T150405"
+
 //ics date time format
-const IcsFormat = "20060102T150405Z"
+const IcsFormat = IcsFormatWithoutTZ + "Z"
 
 // Y-m-d H:i:S time format
 const YmdHis = "2006-01-02 15:04:05"
