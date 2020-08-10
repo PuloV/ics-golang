@@ -382,8 +382,8 @@ func TestCalendarEvents(t *testing.T) {
 	}
 
 	//  event must have
-	start, _ := time.Parse(IcsFormat, "20140714T100000Z")
-	end, _ := time.Parse(IcsFormat, "20140714T110000Z")
+	start := time.Date(2014, 7, 14, 10, 0, 0, 0, time.FixedZone("EEST", 3*60*00))
+	end := time.Date(2014, 7, 14, 11, 0, 0, 0, time.FixedZone("EEST", 3*60*00))
 	created, _ := time.Parse(IcsFormat, "20140515T075711Z")
 	modified, _ := time.Parse(IcsFormat, "20141125T074253Z")
 	location := "In The Office"
@@ -399,11 +399,11 @@ func TestCalendarEvents(t *testing.T) {
 	org.SetName("r.chupetlovska@gmail.com")
 	org.SetEmail("r.chupetlovska@gmail.com")
 
-	if event.GetStart() != start {
+	if event.GetStart().Equal(start) {
 		t.Errorf("Expected start %s, found %s", start, event.GetStart())
 	}
 
-	if event.GetEnd() != end {
+	if event.GetEnd().Equal(end) {
 		t.Errorf("Expected end %s, found %s", end, event.GetEnd())
 	}
 
@@ -721,5 +721,48 @@ func TestPagerDutyCalendarEventTimes(t *testing.T) {
 	}
 	if !end.Equal(expectedEnd) {
 		t.Fatalf("End should be %s, but was %s", expectedEnd, end)
+	}
+}
+
+func TestAppleCalendar(t *testing.T) {
+	parser := New()
+	input := parser.GetInputChan()
+	input <- "testCalendars/apple.ics"
+	parser.Wait()
+
+	parseErrors, err := parser.GetErrors()
+	if err != nil {
+		t.Errorf("Failed to wait the parse of the calendars ( %s )", err)
+	}
+	if len(parseErrors) != 0 {
+		t.Errorf("Expected 0 error, found %d in :\n  %#v", len(parseErrors), parseErrors)
+	}
+
+	calendars, errCal := parser.GetCalendars()
+	if errCal != nil {
+		t.Errorf("Failed to get calendars ( %s )", errCal)
+	}
+
+	if len(calendars) != 1 {
+		t.Errorf("Expected 1 calendar, found %d calendars", len(calendars))
+		return
+	}
+
+	calendar := calendars[0]
+	if len(calendar.events) != 1 {
+		t.Errorf("Expected no 1 event, got %d", len(calendar.events))
+	}
+
+	event := calendar.events[0]
+
+	st := time.Date(2013, 2, 26, 19, 0, 0, 0, time.FixedZone("CET", -1*60*60))
+	if event.start.Equal(st) {
+		t.Errorf("Expected no start time to be %q, got %q", st, event.start)
+	}
+
+	// Test exact start day
+	et := time.Date(2013, 2, 26, 20, 0, 0, 0, time.FixedZone("CET", -1*60*60))
+	if event.end.Equal(et) {
+		t.Errorf("Expected no start time to be %q, got %q", et, event.end)
 	}
 }

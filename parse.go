@@ -518,9 +518,16 @@ func (p *Parser) parseTimeField(fieldName string, eventData string) (time.Time, 
 			return t, tzID
 		}
 		tzID = result[2]
+
 		dt := result[4]
 		if !strings.Contains(dt, "Z") {
-			dt = fmt.Sprintf("%sZ", dt)
+			loc, err := time.LoadLocation(strings.TrimSpace(tzID))
+			if err != nil {
+				dt = fmt.Sprintf("%sZ", strings.TrimSpace(dt))
+			} else {
+				t, err = time.ParseInLocation(IcsFormatWithoutTZ, strings.TrimSpace(dt), loc)
+				return t, tzID
+			}
 		}
 		t, _ = time.Parse(IcsFormat, dt)
 	}
